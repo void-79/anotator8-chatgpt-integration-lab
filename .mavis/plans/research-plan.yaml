@@ -1,0 +1,190 @@
+﻿version: 1
+plan:
+  name: MCP Integration Research — Anotator8 Lab
+  max_concurrency: 10
+  max_consecutive_failures: 3
+  max_cycles: 5
+  auto_accept: true
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers: []
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-reviewer
+    title: Критический анализ текущей реализации
+    role: produce
+    prompt: |
+      Ты — опытный инженер. Проведи глубокий критический анализ текущей реализации MCP-сервера Anotator8.
+
+      Прочитай ВСЕ файлы в C:\Users\void7\anotator8-chatgpt-integration-lab\src\
+      Прочитай docs\ и tests\
+      Прочитай package.json, tsconfig.json
+
+      Для КАЖДОГО файла ответь:
+      1. Что хорошо / правильно сделано
+      2. Что можно улучшить
+      3. Что устарело или не соответствует последним версиям SDK
+
+      Особое внимание:
+      - @modelcontextprotocol/sdk 1.29.0 — правильно ли используется?
+      - StreamableHTTPServerTransport — правильная конфигурация?
+      - registerAppTool / registerAppResource — правильное использование?
+      - Zod схемы — полные ли? Совместимы ли с MCP спецификацией?
+      - structuredContent в ответах — правильно ли используется?
+      - error handling — есть ли граничные случаи?
+      - Security — нет ли проблем?
+      - Все ли 7 инструментов корректно зарегистрированы?
+      - Есть ли missing features? (sampling, roots, prompts endpoints)
+
+      ВЫВОД: напиши подробный критический отчёт в файл deliverable.md
+    assigned_to: coder
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 2
+    hang_alert_after_ms: 900000
+    timeout_ms: 1200000
+
+  - id: mcp-latest-research
+    title: Исследование новейших паттернов MCP (web search)
+    role: produce
+    prompt: |
+      Проведи глубокое веб-исследование. Найди САМУЮ НОВУЮ информацию:
+
+      1. Официальный Model Context Protocol GitHub — README, examples, latest commits
+         Поиск: site:github.com/modelcontextprotocol/typescript-sdk OR site:github.com/modelcontextprotocol/python-sdk
+         Поиск: "modelcontextprotocol" latest 2025
+
+      2. @modelcontextprotocol/sdk — актуальная версия, новые API, изменения за 2025 год
+         Поиск: "@modelcontextprotocol/sdk" "2025" OR "2024" changelog
+
+      3. ChatGPT Developer Mode (Model Context Protocol) — September 2025 launch
+         Поиск: "ChatGPT Developer Mode" MCP "September 2025"
+         Поиск: site:openai.com "model context protocol"
+
+      4. Streamable HTTP transport — правильная конфигурация, best practices
+         Поиск: "StreamableHTTP" MCP "2024" OR "2025" transport
+
+      5. MCP ext-apps — @modelcontextprotocol/ext-apps использование, реальные примеры
+         Поиск: "@modelcontextprotocol/ext-apps" example
+
+      ВЫВОД: напиши структурированный отчёт с ссылками на источники в deliverable.md
+      Формат:
+      - Актуальная версия SDK
+      - Новые API / паттерны
+      - Лучшие практики
+      - Ссылки на источники
+    assigned_to: general
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 2
+    hang_alert_after_ms: 900000
+    timeout_ms: 1200000
+
+  - id: realworld-research
+    title: Production MCP серверы — реальные реализации (web search)
+    role: produce
+    prompt: |
+      Найди реальные production MCP серверы на GitHub. Исследуй:
+
+      1. GitHub trending — MCP server examples
+         Поиск: site:github.com MCP server "typescript" stars:>100
+         Поиск: "MCP server" "typescript" "2024" OR "2025"
+
+      2. Официальные примеры MCP серверов
+         Поиск: site:github.com/modelcontextprotocol examples
+         Поиск: "MCP server example" "typescript" OR "python"
+
+      3. Production deployment patterns для MCP
+         Поиск: "MCP server" production deployment nginx "2025"
+         Поиск: "MCP" "Docker" deployment
+
+      4. Authentication patterns для MCP серверов
+         Поиск: "MCP server" authentication bearer "2025"
+         Поиск: "MCP" OAuth integration
+
+      5. Cloudflare Tunnel / ngrok для MCP
+         Поиск: "Cloudflare Tunnel" MCP "ChatGPT Developer Mode"
+
+      ВЫВОД: напиши отчёт о реальных реализациях с анализом того, что они делают хорошо
+      Сравни с текущей реализацией в C:\Users\void7\anotator8-chatgpt-integration-lab\
+      Какие паттерны можно позаимствовать?
+    assigned_to: general
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 2
+    hang_alert_after_ms: 900000
+    timeout_ms: 1200000
+
+  - id: alternatives-research
+    title: Альтернативы MCP и AI Tool Integration стандарты (web search)
+    role: produce
+    prompt: |
+      Исследуй альтернативные стандарты интеграции AI инструментов:
+
+      1. Anthropic MCP (Model Context Protocol) vs OpenAI Agents SDK
+         Поиск: "Anthropic MCP" vs "OpenAI Agents SDK" comparison 2025
+         Поиск: "AI tool integration" standard comparison 2025
+
+      2. A2A Protocol (Agent2Agent) от Google/Adobe
+         Поиск: "A2A" "agent to agent" protocol Google 2025
+         Поиск: "agent2agent.io" specification
+
+      3. LangChain MCP integration
+         Поиск: "LangChain" MCP "2025" integration
+         Поиск: "LangGraph" MCP server
+
+      4. Другие протоколы: E2B, Braintrust, etc.
+         Поиск: "AI agent" "tool protocol" comparison 2025
+
+      5. Как MCP соотносится с этими стандартами? Что выбрать для интеграции с ChatGPT?
+
+      ВЫВОД: отчёт с рекомендацией — правильный ли выбор сделан в текущей реализации?
+      Что можно улучшить в свете альтернатив?
+    assigned_to: general
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 2
+    hang_alert_after_ms: 900000
+    timeout_ms: 1200000
+
+  - id: synthesis
+    title: Синтез всех исследований — итоговый отчёт
+    role: produce
+    prompt: |
+      Прочитай все deliverable.md файлы от параллельных исследователей.
+      Они находятся в папке с планом исследования.
+
+      Также прочитай текущую реализацию:
+      - C:\Users\void7\anotator8-chatgpt-integration-lab\src\server\index.ts
+      - C:\Users\void7\anotator8-chatgpt-integration-lab\src\server\anotator8-adapter.ts
+
+      Напиши ИТОГОВЫЙ ОТЧЁТ в файл deliverable.md содержащий:
+
+      1. КРАТКОЕ РЕЗЮМЕ — 3-5 ключевых выводов
+      2. АРХИТЕКТУРНЫЕ ПРОБЛЕМЫ текущей реализации (из impl-reviewer)
+      3. НОВЫЕ ПАТТЕРНЫ, которые нужно внедрить (из mcp-latest-research)
+      4. ЧТО ДЕЛАЮТ production серверы (из realworld-research)
+         Сравнение с нашей реализацией
+      5. АЛЬТЕРНАТИВНЫЕ ПОДХОДЫ стоит ли использовать? (из alternatives-research)
+      6. CONCRETE ACTION ITEMS — пронумерованный список того,
+         что нужно изменить в реализации
+         Для КАЖДОГО пункта укажи:
+         - Что изменить
+         - Файл и строки
+         - Ожидаемый результат
+    assigned_to: general
+    verified_by: verifier
+    depends_on:
+      - impl-reviewer
+      - mcp-latest-research
+      - realworld-research
+      - alternatives-research
+    gates: []
+    max_retries: 2
+    hang_alert_after_ms: 600000
+    timeout_ms: 600000

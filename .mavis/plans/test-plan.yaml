@@ -1,0 +1,10 @@
+version: 1
+plan:
+  name: "Test plan"
+  max_concurrency: 1
+tasks:
+  - id: test
+    title: "Test task"
+    prompt: "Return the text 'Hello from test task'."
+    assigned_to: general
+    verified_by: ~

@@ -1,0 +1,352 @@
+{
+  "version": "24.0.0",
+  "videoUrl": "https://example.com/sample-video.mp4",
+  "videoSource": {
+    "kind": "direct-url",
+    "url": "https://example.com/sample-video.mp4",
+    "duration": 120.5
+  },
+  "locale": "en",
+  "classroomId": "classroom-demo-001",
+  "classroomName": "Demo Classroom",
+  "subtitleTracks": [
+    {
+      "id": "track-en-001",
+      "language": "en",
+      "label": "English Subtitles",
+      "visible": true,
+      "locked": false
+    },
+    {
+      "id": "track-ru-001",
+      "language": "ru",
+      "label": "Русские субтитры",
+      "visible": false,
+      "locked": false
+    }
+  ],
+  "subtitleCues": [
+    {
+      "id": "cue-001",
+      "trackId": "track-en-001",
+      "startTime": 0,
+      "endTime": 3.5,
+      "text": {
+        "en": "Welcome to the Anotator8 demo project.",
+        "ru": "Добро пожаловать в демо-проект Anotator8.",
+        "kk": ""
+      },
+      "style": {
+        "fontFamily": "system-ui",
+        "fontSize": 36,
+        "color": "#ffffff",
+        "backgroundColor": "transparent",
+        "outlineColor": "#000000",
+        "outlineWidth": 2,
+        "shadow": true,
+        "align": "center",
+        "verticalPosition": "bottom"
+      },
+      "animation": { "type": "none" }
+    },
+    {
+      "id": "cue-002",
+      "trackId": "track-en-001",
+      "startTime": 5.2,
+      "endTime": 8.0,
+      "text": {
+        "en": "This video demonstrates annotation features.",
+        "ru": "Это видео демонстрирует возможности аннотаций.",
+        "kk": ""
+      },
+      "style": {
+        "fontFamily": "system-ui",
+        "fontSize": 36,
+        "color": "#ffffff",
+        "backgroundColor": "transparent",
+        "outlineColor": "#000000",
+        "outlineWidth": 2,
+        "shadow": true,
+        "align": "center",
+        "verticalPosition": "bottom"
+      },
+      "animation": { "type": "none" }
+    },
+    {
+      "id": "cue-003",
+      "trackId": "track-en-001",
+      "startTime": 15.0,
+      "endTime": 20.5,
+      "text": {
+        "en": "Important concept highlighted here.",
+        "ru": "Здесь выделен важный концепт.",
+        "kk": ""
+      },
+      "style": {
+        "fontFamily": "system-ui",
+        "fontSize": 36,
+        "color": "#ffff00",
+        "backgroundColor": "transparent",
+        "outlineColor": "#000000",
+        "outlineWidth": 2,
+        "shadow": true,
+        "align": "center",
+        "verticalPosition": "bottom"
+      },
+      "animation": { "type": "fade", "inMs": 200, "outMs": 200 }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "ann-001",
+      "type": "annotation",
+      "spatial": {
+        "x": 0.1,
+        "y": 0.2,
+        "width": 0.15,
+        "height": 0.1,
+        "rotation": 0,
+        "zIndex": 1
+      },
+      "temporal": {
+        "startTime": 5.0,
+        "endTime": 15.0,
+        "duration": 10.0
+      },
+      "visual": {
+        "color": "#ff0000",
+        "opacity": 1.0,
+        "strokeWidth": 2,
+        "fill": "transparent"
+      },
+      "extensions": {
+        "visual": {
+          "shapeType": "rect",
+          "annotationType": "box",
+          "textContent": "First annotation"
+        }
+      },
+      "sync": {
+        "serverSeq": 1,
+        "localOpId": "op-001",
+        "nodeId": "client-001",
+        "lastSyncedAt": "2024-01-01T00:00:00Z",
+        "properties": {},
+        "integrity": {
+          "parentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "signature": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "publicKey": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "parentId": null,
+      "fractionalIndex": "a0",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "deletedAt": null,
+      "ownerId": "user-demo-001",
+      "isEducationRecord": true,
+      "dataResidency": "us-east"
+    },
+    {
+      "id": "ann-002",
+      "type": "annotation",
+      "spatial": {
+        "x": 0.5,
+        "y": 0.3,
+        "width": 0.2,
+        "height": 0.15,
+        "rotation": 0,
+        "zIndex": 2
+      },
+      "temporal": {
+        "startTime": 10.0,
+        "endTime": 25.0,
+        "duration": 15.0
+      },
+      "visual": {
+        "color": "#00ff00",
+        "opacity": 0.8,
+        "strokeWidth": 3,
+        "fill": "#00ff0040"
+      },
+      "extensions": {
+        "visual": {
+          "shapeType": "ellipse",
+          "annotationType": "ellipse",
+          "textContent": "Important area"
+        }
+      },
+      "sync": {
+        "serverSeq": 2,
+        "localOpId": "op-002",
+        "nodeId": "client-001",
+        "lastSyncedAt": "2024-01-01T00:00:00Z",
+        "properties": {},
+        "integrity": {
+          "parentHash": "1111111111111111111111111111111111111111111111111111111111111111",
+          "signature": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "publicKey": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "parentId": null,
+      "fractionalIndex": "a1",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "deletedAt": null,
+      "ownerId": "user-demo-001",
+      "isEducationRecord": true,
+      "dataResidency": "us-east"
+    },
+    {
+      "id": "ann-003",
+      "type": "annotation",
+      "spatial": {
+        "x": 0.2,
+        "y": 0.6,
+        "width": 0.3,
+        "height": 0.05,
+        "rotation": 0,
+        "zIndex": 3
+      },
+      "temporal": {
+        "startTime": 20.0,
+        "endTime": null,
+        "duration": 100.5
+      },
+      "visual": {
+        "color": "#0000ff",
+        "opacity": 1.0,
+        "strokeWidth": 2,
+        "fill": "transparent"
+      },
+      "extensions": {
+        "visual": {
+          "shapeType": "arrow",
+          "annotationType": "arrow"
+        }
+      },
+      "sync": {
+        "serverSeq": 3,
+        "localOpId": "op-003",
+        "nodeId": "client-001",
+        "lastSyncedAt": "2024-01-01T00:00:00Z",
+        "properties": {},
+        "integrity": {
+          "parentHash": "2222222222222222222222222222222222222222222222222222222222222222",
+          "signature": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "publicKey": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "parentId": null,
+      "fractionalIndex": "a2",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "deletedAt": null,
+      "ownerId": "user-demo-001",
+      "isEducationRecord": true,
+      "dataResidency": "us-east"
+    },
+    {
+      "id": "ann-004",
+      "type": "annotation",
+      "spatial": {
+        "x": 0.6,
+        "y": 0.5,
+        "width": 0.25,
+        "height": 0.08,
+        "rotation": 0,
+        "zIndex": 4
+      },
+      "temporal": {
+        "startTime": 30.0,
+        "endTime": 45.0,
+        "duration": 15.0
+      },
+      "visual": {
+        "color": "#ffff00",
+        "opacity": 0.9,
+        "strokeWidth": 1,
+        "fill": "transparent"
+      },
+      "extensions": {
+        "visual": {
+          "shapeType": "rect",
+          "annotationType": "highlight",
+          "textContent": "Key concept"
+        }
+      },
+      "sync": {
+        "serverSeq": 4,
+        "localOpId": "op-004",
+        "nodeId": "client-001",
+        "lastSyncedAt": "2024-01-01T00:00:00Z",
+        "properties": {},
+        "integrity": {
+          "parentHash": "3333333333333333333333333333333333333333333333333333333333333333",
+          "signature": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "publicKey": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "parentId": null,
+      "fractionalIndex": "a3",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "deletedAt": null,
+      "ownerId": "user-demo-001",
+      "isEducationRecord": true,
+      "dataResidency": "us-east"
+    },
+    {
+      "id": "ann-005",
+      "type": "annotation",
+      "spatial": {
+        "x": 0.15,
+        "y": 0.75,
+        "width": 0.1,
+        "height": 0.1,
+        "rotation": 0,
+        "zIndex": 5
+      },
+      "temporal": {
+        "startTime": 40.0,
+        "endTime": 50.0,
+        "duration": 10.0
+      },
+      "visual": {
+        "color": "#ff00ff",
+        "opacity": 1.0,
+        "strokeWidth": 2,
+        "fill": "#ff00ff40"
+      },
+      "extensions": {
+        "visual": {
+          "shapeType": "circle",
+          "annotationType": "comment",
+          "textContent": "User comment here"
+        }
+      },
+      "sync": {
+        "serverSeq": 5,
+        "localOpId": "op-005",
+        "nodeId": "client-001",
+        "lastSyncedAt": "2024-01-01T00:00:00Z",
+        "properties": {},
+        "integrity": {
+          "parentHash": "4444444444444444444444444444444444444444444444444444444444444444",
+          "signature": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "publicKey": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "parentId": null,
+      "fractionalIndex": "a4",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "deletedAt": null,
+      "ownerId": "user-demo-001",
+      "isEducationRecord": true,
+      "dataResidency": "us-east"
+    }
+  ],
+  "_synthetic": true,
+  "_note": "This is a synthetic demo fixture for testing the Anotator8 ChatGPT integration lab. Not a real Anotator8 project."
+}
