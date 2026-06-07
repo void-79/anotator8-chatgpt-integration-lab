@@ -1,6 +1,6 @@
 {
   "name": "anotator8-chatgpt-integration-lab",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "External ChatGPT Apps SDK/MCP integration lab for Anotator8 project review.",
   "private": true,
   "type": "module",
@@ -20,6 +20,7 @@
     "smoke": "tsx scripts/smoke.ts",
     "verify": "tsx scripts/verify.ts",
     "inspect": "npx -y @modelcontextprotocol/inspector@latest --server-url http://127.0.0.1:8787/mcp --transport http",
+    "verify:dev": "tsx scripts/inspect-headless.ts",
     "typecheck": "tsc --noEmit",
     "validate:canonical": "tsx scripts/validate-canonical.ts",
     "validate:truth-passport": "tsx scripts/validate-truth-passports.ts",

@@ -1,8 +1,12 @@
 /**
  * scripts/verify.ts — end-to-end smoke for the lab.
  *
- * Runs build + test + smoke + demo:stdio in sequence.
- * Exits 0 if all four pass, 1 if any fail.
+ * Runs build + test + smoke + demo:stdio + verify:dev + validate:canonical +
+ * validate:truth-passport in sequence. Exits 0 if all pass, 1 if any fail.
+ *
+ * `verify:dev` is the headless, non-interactive equivalent of `npm run inspect`
+ * (which opens the MCP Inspector UI in a browser). It is included here so CI
+ * hosts without a browser still get an inspector-style roundtrip proof.
  *
  * Use this as the "is this thing actually working?" command.
  * `npm run verify`
@@ -14,6 +18,7 @@ const steps: Array<{ name: string; script: string }> = [
   { name: "test", script: "test" },
   { name: "smoke", script: "smoke" },
   { name: "demo:stdio", script: "demo:stdio" },
+  { name: "verify:dev", script: "verify:dev" },
   { name: "validate:canonical", script: "validate:canonical" },
   { name: "validate:truth-passport", script: "validate:truth-passport" },
 ];
