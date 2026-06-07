@@ -164,12 +164,14 @@ The bridge is verified in CI by `tests/contract/widget-bridge.test.ts` which ass
 
 ## Production Auth Gap
 
-The lab ships the OAuth 2.0 Protected Resource Metadata (RFC 9728) foundation in v0.3.0 — `/.well-known/oauth-protected-resource[/<path>]` is served and the 401/403 challenge carries `resource_metadata="..."`. Authorization-server implementation is still a follow-up. Before any real deployment that handles user / customer / student project data:
+The lab ships the **OAuth 2.1 Authorization Server foundation** in v0.7.0 — a minimal in-process AS that mints RS256 JWT access tokens and supports PKCE S256, DCR, and CIMD. See [OAUTH_AS.md](./OAUTH_AS.md) for the full design and the cutover recipe.
 
-1. Implement OAuth 2.1 authorization server (token issuance, introspection, JWKS, dynamic client registration).
-2. Wire token validation to replace the static `MCP_AUTH_TOKEN` allowlist.
-3. Add per-tool scope enforcement (recommended: `mcp:read` for `list_capabilities` / `inspect_project` / `summarize_annotations` / `find_annotations` / `suggest_labels`; `mcp:read` + `mcp:plan` for `create_review_plan`; `mcp:read` + `mcp:export` for `export_chatgpt_report`).
-4. Front the public endpoint with a reverse proxy that does rate limiting and (ideally) WAF.
+In v0.7.0 the AS is **always on** for discovery, but auth is **opt-in** (`MCP_OAUTH_REQUIRE_AUTH=true` to require it for all tools). Before any real deployment that handles user / customer / student project data:
+
+1. Cut over to a production IdP (Auth0 / Okta / Cognito / Stytch) using the [cutover recipe in OAUTH_AS.md](./OAUTH_AS.md#cutover-recipe-production-idp).
+2. Front the public endpoint with a reverse proxy that does rate limiting and (ideally) WAF.
+3. Set `MCP_OAUTH_REQUIRE_AUTH=true` once the IdP is in place.
+4. Configure per-tool scopes (`MCP_OAUTH_TOOL_SCHEMES_JSON`) for fine-grained access.
 5. Review `docs/SECURITY.md` and `docs/PROTOTYPE_AUDIT.md`.
 
 ## OAuth Discovery (RFC 9728)
@@ -191,6 +193,30 @@ WWW-Authenticate: Bearer realm="anotator8-chatgpt-lab",
                   error="invalid_request",
                   resource_metadata="https://your-public-host.example/.well-known/oauth-protected-resource/mcp"
 ```
+
+## OAuth 2.1 Authorization Server (RFC 8414) — added in v0.7.0
+
+From v0.7.0, the lab also serves the **Authorization Server** well-known documents and the AS endpoints needed to issue JWT access tokens:
+
+```text
+GET  /.well-known/oauth-authorization-server   (RFC 8414 §3)
+GET  /.well-known/openid-configuration         (OIDC Discovery §4)
+GET  /oauth/jwks.json                          (RFC 7517 JWKS)
+GET  /oauth2/v1/authorize                      (RFC 6749 §4.1.1)
+POST /oauth2/v1/authorize                      (consent decision)
+POST /oauth2/v1/token                          (RFC 6749 §4.1.3)
+POST /oauth2/v1/register                       (RFC 7591 DCR)
+```
+
+The AS is **always on for discovery**, but auth is **opt-in** for the `/mcp` endpoint. To require auth on every tool call, set `MCP_OAUTH_REQUIRE_AUTH=true`. To require auth on specific tools only, use `MCP_OAUTH_TOOL_SCHEMES_JSON` (per-tool JSON of security schemes).
+
+To exercise the full flow end-to-end without a browser or external IdP:
+
+```bash
+npm run demo:oauth
+```
+
+The script registers a client, runs the PKCE S256 authorization-code flow, calls `/mcp` with the resulting JWT, and verifies single-use code enforcement and PKCE-mismatch rejection. See [OAUTH_AS.md](./OAUTH_AS.md) for the design, configuration reference, and the cutover recipe for production IdPs.
 
 ## Tunnel Options Compared
 

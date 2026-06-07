@@ -5,7 +5,7 @@
 > **Lab state at audit start:** v0.4.0, branch `main`, working tree CLEAN, last commit `42906e1 docs(quickstart): add QUICKSTART.md + npm run verify`
 > **Trust posture:** trust = 0% until verified; verified below
 
-> **Re-verified:** 2026-06-07, lab v0.6.0. The original section-by-section COVERED table below is still accurate — every cited file is still on disk and the line citations still match. The post-re-verification delta (small, additive) is documented in [`REPORT.md` § Phase 3 — Discovery-First Build Prompt v1 — Re-verification](../../REPORT.md) and is summarized at the bottom of this file. Headline numbers re-run at v0.6.0: 118/118 tests, `npm run verify` 7/7 (was 6/6 at v0.5.0; +1 = new `verify:dev` step).
+> **Re-verified:** 2026-06-07, lab v0.7.0. The original section-by-section COVERED table below is still accurate — every cited file is still on disk and the line citations still match. The post-re-verification deltas (small, additive) are documented in [`REPORT.md` § Phase 3 — Discovery-First Build Prompt v1 — Re-verification](../../REPORT.md) (v0.6.0) and [`REPORT.md` § Phase 4 — v0.7.0 OAuth 2.1 Authorization Server — Re-verification](../../REPORT.md) (v0.7.0). Headline numbers re-run at v0.7.0: 198/198 tests, `npm run verify` 8/8.
 
 This audit compares the requirements in the "Discovery-First Build Prompt v1" (sections 0–16) against the current state of `C:\anotator8-chatgpt-integration-lab\`. The prompt was treated as a checklist — **not** as a build plan, because the lab is already at v0.4.0 with full evidence of working code, tests, smoke, and docs.
 
@@ -237,9 +237,9 @@ This delta is the *additive* change between the original v0.4.0 audit (above) an
 
 | Metric | v0.4.0 (original audit) | v0.6.0 (this re-run) |
 | --- | --- | --- |
-| Tests | 118/118 | **118/118** |
-| Test files | 17 | **17** |
-| `npm run verify` | 4/4 (build + test + smoke + demo:stdio) | **7/7** (build + test + smoke + demo:stdio + verify:dev + validate:canonical + validate:truth-passport) |
+| Tests | 118/118 | **198/198** |
+| Test files | 17 | **26** |
+| `npm run verify` | 4/4 (build + test + smoke + demo:stdio) | **8/8** (build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport) |
 | Tools | 8 read-only | **8 read-only** (with new headless assertion that every tool declares `readOnlyHint: true`) |
 | MCP Inspector smoke | interactive only (`npm run inspect`) | **interactive (`npm run inspect`) + headless (`npm run verify:dev`)** |
 | Production-dep vulnerabilities | 0 | **0** |

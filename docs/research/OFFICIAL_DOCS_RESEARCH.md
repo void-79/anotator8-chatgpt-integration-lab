@@ -30,8 +30,9 @@
 | Item | Why unclear | Plan |
 | --- | --- | --- |
 | ChatGPT Developer Mode live connection | No `cloudflared`, `ngrok`, or `tunnel-client` installed; no ChatGPT account state in this environment. | Documented in `docs/CHATGPT_APP_SETUP.md`; needs paid ChatGPT account + tunnel client. |
-| OAuth 2.1 authorization server (token issuance, introspection, JWKS, DCR, CIMD) | Apps SDK requires it for public App Store submission. v0.3.0 ships the RFC 9728 discovery foundation; AS is the next step. | Design doc ready at `docs/OAUTH_AS_DESIGN.md` (target v0.7.0); implementation does not start until design is approved. Documented as a follow-up in `REPORT.md` § Follow-up and `docs/SECURITY.md`. |
-| Per-tool scope enforcement | Requires scope vocabulary + a token-introspection path. v0.3.0 declares `scopes_supported` in the metadata document; runtime enforcement needs a real AS. | Next step after AS. |
+| OAuth 2.1 authorization server (token issuance, introspection, JWKS, DCR, CIMD) | **Resolved in v0.7.0.** Implemented as an in-process AS with RS256 JWT, PKCE S256, DCR (RFC 7591), and CIMD (draft). See `docs/OAUTH_AS.md` for the design and cutover recipe. | n/a — the in-process AS is shipped. Production cutover is the remaining step. |
+| Per-tool scope enforcement | **Resolved in v0.7.0.** Per-tool `securitySchemes` are declared in `src/server/oauth/security-schemes.ts`; the validator checks `scope` claims on JWT validation. | n/a. |
+| Production IdP cutover | The in-process AS is suitable for self-hosted demos only. | Follow the [cutover recipe in OAUTH_AS.md](../OAUTH_AS.md#cutover-recipe-production-idp). |
 | Load test with >10k annotations | Adapter has not been benchmarked at scale. | Deferred. |
 
 ## Evidence Links
