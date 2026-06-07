@@ -1,593 +1,402 @@
-/**
- * Anotator8 Adapter - Normalizes Anotator8 project data for MCP tools
- * Isolates Anotator8-specific schema from tool implementations
- */
-
 import type {
-  ProjectFilePayload,
-  NormalizedProject,
+  Anotator8ProjectRaw,
+  IntegrationWarning,
   NormalizedAnnotation,
-  NormalizedVideoSource,
+  NormalizedProject,
   NormalizedSubtitleTrack,
   NormalizedTimelineTrack,
-  IntegrationWarning,
-  AnnotationType,
-  AnnotationShapeType,
-  VideoSource,
-  UDMNode,
-  SubtitleTrack,
+  ProjectFilePayload,
   SubtitleCue,
-  AppLocale,
-} from '../shared/types.js';
+  SubtitleTrack,
+  UDMNode,
+  ValidationResult,
+  VideoSource,
+} from "../shared/types.js";
+import { IntegrationError } from "./errors.js";
 
-// ────────────────────────────────────────────────────
-// Adapter Options
-// ────────────────────────────────────────────────────
-export interface AdapterOptions {
-  readonly maxAnnotations?: number;
-  readonly preserveUnknownFields?: boolean;
+const KNOWN_PROJECT_FIELDS = new Set([
+  "version",
+  "videoUrl",
+  "videoSource",
+  "locale",
+  "classroomId",
+  "classroomName",
+  "subtitleTracks",
+  "subtitleCues",
+  "nodes",
+]);
+
+const SUPPORTED_ANNOTATION_TYPES = new Set([
+  "box",
+  "polygon",
+  "point",
+  "arrow",
+  "text",
+  "image",
+  "ellipse",
+  "chapter",
+  "highlight",
+  "comment",
+  "tag",
+]);
+
+const SUPPORTED_SHAPES = new Set(["rect", "circle", "polygon", "arrow", "freehand"]);
+const MAX_PROJECT_BYTES = 10 * 1024 * 1024;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// ────────────────────────────────────────────────────
-// Anotator8 Adapter Class
-// ────────────────────────────────────────────────────
-export class Anotator8Adapter {
-  private readonly options: Required<AdapterOptions>;
+function asNumber(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
 
-  constructor(options: AdapterOptions = {}) {
-    this.options = {
-      maxAnnotations: options.maxAnnotations ?? 10000,
-      preserveUnknownFields: options.preserveUnknownFields ?? true,
+function secondsToMs(value: number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  return Math.round(value * 1000);
+}
+
+function previewText(value: unknown): string {
+  if (!isRecord(value)) return "";
+  return String(value.en ?? value.ru ?? value.kk ?? "").slice(0, 120);
+}
+
+function makeWarning(
+  code: string,
+  message: string,
+  severity: IntegrationWarning["severity"],
+  path?: string,
+): IntegrationWarning {
+  return { code, message, severity, ...(path ? { path } : {}) };
+}
+
+export class Anotator8Adapter {
+  parse(raw: Anotator8ProjectRaw): ProjectFilePayload {
+    const approxSize = JSON.stringify(raw).length;
+    if (approxSize > MAX_PROJECT_BYTES) {
+      throw new IntegrationError("too_large_input", "Project payload exceeds 10MB.", "projectData");
+    }
+    if (!isRecord(raw)) {
+      throw new IntegrationError("invalid_input", "Project payload must be a JSON object.", "projectData");
+    }
+    if (!Array.isArray(raw.nodes)) {
+      throw new IntegrationError("missing_field", 'Project payload must contain a "nodes" array.', "nodes");
+    }
+
+    return {
+      version: typeof raw.version === "string" ? raw.version : "unknown",
+      videoUrl: typeof raw.videoUrl === "string" ? raw.videoUrl : undefined,
+      videoSource: isRecord(raw.videoSource) ? (raw.videoSource as VideoSource) : undefined,
+      locale: raw.locale === "en" || raw.locale === "ru" || raw.locale === "kk" ? raw.locale : undefined,
+      classroomId: typeof raw.classroomId === "string" ? raw.classroomId : undefined,
+      classroomName: typeof raw.classroomName === "string" ? raw.classroomName : undefined,
+      subtitleTracks: Array.isArray(raw.subtitleTracks) ? (raw.subtitleTracks as SubtitleTrack[]) : undefined,
+      subtitleCues: Array.isArray(raw.subtitleCues) ? (raw.subtitleCues as SubtitleCue[]) : undefined,
+      nodes: raw.nodes as UDMNode[],
     };
   }
 
-  /**
-   * Parse raw project data into NormalizedProject
-   */
-  normalize(raw: unknown): NormalizedProject {
-    const payload = this.parsePayload(raw);
+  normalize(raw: Anotator8ProjectRaw): NormalizedProject {
+    const payload = this.parse(raw);
     const warnings: IntegrationWarning[] = [];
-
-    // Normalize video source
-    const source = this.normalizeVideoSource(payload.videoSource, payload.videoUrl, warnings);
-
-    // Normalize annotations (UDMNodes)
+    const source = this.normalizeSource(payload, warnings);
     const annotations = this.normalizeAnnotations(payload.nodes, warnings);
-
-    // Normalize subtitle tracks
-    const subtitleTracks = this.normalizeSubtitleTracks(
-      payload.subtitleTracks ?? [],
-      payload.subtitleCues ?? [],
-      warnings
-    );
-
-    // Build timeline tracks from nodes
-    const timelineTracks = this.buildTimelineTracks(payload.nodes);
-
-    // Collect unknown fields from the raw object (before parsing into ProjectFilePayload)
-    const unknownFields = this.collectUnknownFields(raw);
-
-    // Compute stats
-    const stats = this.computeStats(annotations, payload.subtitleCues ?? []);
+    const subtitles = this.normalizeSubtitles(payload.subtitleTracks ?? [], payload.subtitleCues ?? []);
+    const timeline = this.normalizeTimeline(payload.nodes, subtitles, warnings);
 
     return {
       version: payload.version,
       source,
       annotations,
-      subtitleTracks,
-      timelineTracks,
+      subtitles,
+      timeline,
       metadata: {
-        locale: payload.locale,
-        classroomId: payload.classroomId,
-        classroomName: payload.classroomName,
+        ...(payload.locale ? { locale: payload.locale } : {}),
+        ...(payload.classroomId ? { classroomId: payload.classroomId } : {}),
+        ...(payload.classroomName ? { classroomName: payload.classroomName } : {}),
       },
-      unknownFields,
+      unknownFields: this.collectUnknownFields(raw),
       warnings,
-      stats,
     };
   }
 
-  /**
-   * Parse raw input into ProjectFilePayload with validation
-   */
-  private parsePayload(raw: unknown): ProjectFilePayload {
-    if (typeof raw !== 'object' || raw === null) {
-      throw new Error('Project file must be an object');
+  validate(raw: Anotator8ProjectRaw): ValidationResult {
+    const errors: IntegrationWarning[] = [];
+    const warnings: IntegrationWarning[] = [];
+    const checks: Array<{ name: string; passed: boolean; evidence: string }> = [];
+    let payload: ProjectFilePayload;
+
+    try {
+      payload = this.parse(raw);
+      checks.push({ name: "Project payload shape", passed: true, evidence: "nodes array present" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(makeWarning("PARSE_ERROR", message, "error", "projectData"));
+      checks.push({ name: "Project payload shape", passed: false, evidence: message });
+      return { valid: false, errors, warnings, checks };
     }
 
-    const obj = raw as Record<string, unknown>;
+    if (payload.version !== "24.0.0") {
+      warnings.push(makeWarning("UNKNOWN_VERSION", `Observed project version "${payload.version}".`, "warning", "version"));
+    }
+    checks.push({ name: "Version observed", passed: true, evidence: payload.version });
 
-    if (!Array.isArray(obj.nodes)) {
-      throw new Error('Project file must contain a "nodes" array');
+    const ids = new Set<string>();
+    payload.nodes.forEach((node, index) => {
+      const path = `nodes[${index}]`;
+      if (!node.id) {
+        errors.push(makeWarning("MISSING_ID", "Node is missing id.", "error", `${path}.id`));
+      } else if (ids.has(node.id)) {
+        errors.push(makeWarning("DUPLICATE_ID", `Duplicate node id "${node.id}".`, "error", `${path}.id`));
+      } else {
+        ids.add(node.id);
+      }
+
+      if (node.type && !["annotation", "element", "clip", "track"].includes(node.type)) {
+        warnings.push(makeWarning("UNKNOWN_NODE_TYPE", `Unknown node type "${node.type}".`, "warning", `${path}.type`));
+      }
+
+      if (!node.spatial) {
+        errors.push(makeWarning("MISSING_SPATIAL", "Node is missing spatial data.", "error", `${path}.spatial`));
+      } else if (
+        node.spatial.x < 0 ||
+        node.spatial.y < 0 ||
+        node.spatial.x > 1 ||
+        node.spatial.y > 1 ||
+        node.spatial.width <= 0 ||
+        node.spatial.height <= 0
+      ) {
+        warnings.push(makeWarning("INVALID_SPATIAL_RANGE", "Node spatial values are outside normalized bounds.", "warning", `${path}.spatial`));
+      }
+
+      if (!node.temporal) {
+        errors.push(makeWarning("MISSING_TEMPORAL", "Node is missing temporal data.", "error", `${path}.temporal`));
+      } else if (node.temporal.endTime !== null && node.temporal.endTime < node.temporal.startTime) {
+        warnings.push(makeWarning("BROKEN_TIME_RANGE", "Node endTime is earlier than startTime.", "warning", `${path}.temporal`));
+      }
+
+      const annotationType = node.extensions?.visual?.annotationType;
+      if (annotationType && !SUPPORTED_ANNOTATION_TYPES.has(annotationType)) {
+        warnings.push(makeWarning("UNKNOWN_ANNOTATION_TYPE", `Unknown annotation type "${annotationType}".`, "warning", `${path}.extensions.visual.annotationType`));
+      }
+    });
+
+    checks.push({
+      name: "Node ids",
+      passed: !errors.some((warning) => warning.code === "MISSING_ID" || warning.code === "DUPLICATE_ID"),
+      evidence: `${ids.size} unique ids across ${payload.nodes.length} nodes`,
+    });
+
+    const trackIds = new Set((payload.subtitleTracks ?? []).map((track) => track.id));
+    for (const [index, cue] of (payload.subtitleCues ?? []).entries()) {
+      if (!trackIds.has(cue.trackId)) {
+        warnings.push(makeWarning("ORPHANED_SUBTITLE_CUE", `Cue "${cue.id}" references missing track "${cue.trackId}".`, "warning", `subtitleCues[${index}].trackId`));
+      }
+      if (cue.endTime <= cue.startTime) {
+        errors.push(makeWarning("INVALID_CUE_RANGE", `Cue "${cue.id}" endTime must be greater than startTime.`, "error", `subtitleCues[${index}]`));
+      }
     }
 
-    return {
-      version: typeof obj.version === 'string' ? obj.version : 'unknown',
-      videoUrl: typeof obj.videoUrl === 'string' ? obj.videoUrl : undefined,
-      videoSource: obj.videoSource as VideoSource | undefined,
-      locale: this.normalizeLocale(obj.locale),
-      classroomId: typeof obj.classroomId === 'string' ? obj.classroomId : undefined,
-      classroomName: typeof obj.classroomName === 'string' ? obj.classroomName : undefined,
-      subtitleTracks: Array.isArray(obj.subtitleTracks)
-        ? (obj.subtitleTracks as SubtitleTrack[])
-        : undefined,
-      subtitleCues: Array.isArray(obj.subtitleCues) ? (obj.subtitleCues as SubtitleCue[]) : undefined,
-      nodes: obj.nodes as UDMNode[],
-    };
-  }
+    checks.push({
+      name: "Subtitle cue ranges",
+      passed: !errors.some((warning) => warning.code === "INVALID_CUE_RANGE"),
+      evidence: `${payload.subtitleCues?.length ?? 0} cue(s) checked`,
+    });
 
-  /**
-   * Validate a UDMNode structure
-   */
-  private isValidNode(node: UDMNode): boolean {
-    if (typeof node.id !== 'string') return false;
-    if (!['annotation', 'element', 'clip', 'track'].includes(node.type)) return false;
-    if (!this.isValidSpatial(node.spatial)) return false;
-    if (!this.isValidTemporal(node.temporal)) return false;
-    if (!this.isValidVisual(node.visual)) return false;
-    return true;
-  }
+    checks.push({
+      name: "Subtitle track references",
+      passed: !warnings.some((warning) => warning.code === "ORPHANED_SUBTITLE_CUE"),
+      evidence: `${trackIds.size} track(s) checked`,
+    });
 
-  private isValidSpatial(s: unknown): boolean {
-    if (typeof s !== 'object' || s === null) return false;
-    const spatial = s as Record<string, unknown>;
-    return (
-      typeof spatial.x === 'number' &&
-      typeof spatial.y === 'number' &&
-      typeof spatial.width === 'number' &&
-      typeof spatial.height === 'number'
-    );
-  }
-
-  private isValidTemporal(t: unknown): boolean {
-    if (typeof t !== 'object' || t === null) return false;
-    const temporal = t as Record<string, unknown>;
-    return typeof temporal.startTime === 'number';
-  }
-
-  private isValidVisual(v: unknown): boolean {
-    if (typeof v !== 'object' || v === null) return false;
-    const visual = v as Record<string, unknown>;
-    return typeof visual.color === 'string';
-  }
-
-  /**
-   * Normalize video source
-   */
-  private normalizeVideoSource(
-    videoSource: VideoSource | undefined,
-    videoUrl: string | undefined,
-    warnings: IntegrationWarning[]
-  ): NormalizedVideoSource {
-    if (!videoSource && !videoUrl) {
-      return {
-        kind: 'none',
-        warnings: [{ code: 'NO_SOURCE', message: 'No video source configured', severity: 'info' }],
-      };
+    if (!payload.videoSource && !payload.videoUrl) {
+      warnings.push(makeWarning("MISSING_SOURCE_METADATA", "No persisted video source metadata is present.", "warning", "videoSource"));
     }
+    checks.push({
+      name: "Video source metadata",
+      passed: Boolean(payload.videoSource || payload.videoUrl),
+      evidence: payload.videoSource?.kind ?? (payload.videoUrl ? "videoUrl" : "none"),
+    });
 
-    // Handle videoSource if present
-    if (videoSource) {
-      return this.normalizeVideoSourceInput(videoSource);
+    return { valid: errors.length === 0, errors, warnings, checks };
+  }
+
+  private normalizeSource(payload: ProjectFilePayload, warnings: IntegrationWarning[]): NormalizedProject["source"] {
+    const sourceWarnings: IntegrationWarning[] = [];
+    const source = payload.videoSource;
+    if (!source && !payload.videoUrl) {
+      sourceWarnings.push(makeWarning("NO_SOURCE", "No video source is persisted in the project.", "info", "videoSource"));
+      return { kind: "none", warnings: sourceWarnings };
     }
-
-    // Infer from videoUrl
-    if (videoUrl) {
-      if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
-        return {
-          kind: 'youtube',
-          label: videoUrl,
-          url: videoUrl,
-          warnings: [
-            { code: 'INFERRED_SOURCE', message: 'Video source inferred from videoUrl', severity: 'info' },
-          ],
-        };
+    if (source?.kind === "local-file") {
+      if (source.objectUrl?.startsWith("blob:")) {
+        sourceWarnings.push(makeWarning("LOCAL_BLOB_NOT_PORTABLE", "Local blob URLs are intentionally not persisted as portable media.", "warning", "videoSource.objectUrl"));
       }
       return {
-        kind: 'direct-url',
-        label: videoUrl,
-        url: videoUrl,
-        warnings: [],
+        kind: "local",
+        label: source.name,
+        durationMs: secondsToMs(source.duration) ?? undefined,
+        warnings: sourceWarnings,
       };
     }
-
-    return {
-      kind: 'unknown',
-      warnings: [{ code: 'UNKNOWN_SOURCE', message: 'Could not determine video source type', severity: 'warning' }],
-    };
-  }
-
-  private normalizeVideoSourceInput(videoSource: unknown): NormalizedVideoSource {
-    if (typeof videoSource !== 'object' || videoSource === null) {
+    if (source?.kind === "direct-url") {
       return {
-        kind: 'unknown',
-        warnings: [{ code: 'INVALID_SOURCE', message: 'Video source is not an object', severity: 'warning' }],
+        kind: "direct-url",
+        label: source.url,
+        url: source.url,
+        durationMs: secondsToMs(source.duration) ?? undefined,
+        warnings: sourceWarnings,
       };
     }
-
-    const vs = videoSource as Record<string, unknown>;
-
-    switch (vs.kind) {
-      case 'local-file':
-        return {
-          kind: 'local',
-          label: String(vs.name ?? 'local file'),
-          durationMs: this.normalizeDuration(vs.duration),
-          warnings: [],
-        };
-      case 'direct-url':
-        return {
-          kind: 'direct-url',
-          label: String(vs.url ?? 'direct URL'),
-          url: String(vs.url),
-          durationMs: this.normalizeDuration(vs.duration),
-          warnings: [],
-        };
-      case 'youtube':
-        return {
-          kind: 'youtube',
-          label: `YouTube: ${String(vs.videoId ?? vs.url)}`,
-          url: String(vs.url),
-          durationMs: this.normalizeDuration(vs.duration),
-          warnings: [],
-        };
-      case 'demo':
-        return {
-          kind: 'direct-url',
-          label: 'Demo video',
-          url: String(vs.url),
-          warnings: [],
-        };
-      default:
-        return {
-          kind: 'unknown',
-          warnings: [{ code: 'UNKNOWN_SOURCE_KIND', message: `Unknown video source kind: ${String(vs.kind)}`, severity: 'warning' }],
-        };
+    if (source?.kind === "youtube") {
+      return {
+        kind: "youtube",
+        label: source.videoId,
+        url: source.url,
+        durationMs: secondsToMs(source.duration) ?? undefined,
+        warnings: sourceWarnings,
+      };
     }
+    if (source?.kind === "demo") {
+      return { kind: "direct-url", label: "demo", url: source.url, warnings: sourceWarnings };
+    }
+    if (payload.videoUrl) {
+      sourceWarnings.push(makeWarning("INFERRED_SOURCE", "Source kind inferred from videoUrl because videoSource is absent.", "info", "videoUrl"));
+      const isYoutube = /youtube\.com|youtu\.be/i.test(payload.videoUrl);
+      return {
+        kind: isYoutube ? "youtube" : "direct-url",
+        label: payload.videoUrl,
+        url: payload.videoUrl,
+        warnings: sourceWarnings,
+      };
+    }
+    warnings.push(makeWarning("UNKNOWN_SOURCE", "Video source is present but unsupported.", "warning", "videoSource"));
+    return { kind: "unknown", warnings: sourceWarnings };
   }
 
-  private normalizeDuration(d: unknown): number | undefined {
-    if (typeof d === 'number' && d > 0) return d * 1000; // Assume seconds if small
-    return undefined;
-  }
-
-  /**
-   * Normalize annotations (UDMNodes)
-   */
-  private normalizeAnnotations(nodes: UDMNode[], warnings: IntegrationWarning[]): NormalizedAnnotation[] {
+  private normalizeAnnotations(nodes: readonly UDMNode[], warnings: IntegrationWarning[]): NormalizedAnnotation[] {
     const annotations: NormalizedAnnotation[] = [];
-    let skipped = 0;
-
-    for (const node of nodes) {
-      if (annotations.length >= this.options.maxAnnotations) {
-        skipped++;
-        continue;
+    nodes.forEach((node, index) => {
+      if (node.deletedAt) return;
+      if (node.type && node.type !== "annotation") return;
+      if (!node.id || !node.spatial || !node.temporal || !node.visual) {
+        warnings.push(makeWarning("ANNOTATION_SKIPPED", "A node is missing required annotation fields.", "warning", `nodes[${index}]`));
+        return;
       }
-
-      try {
-        annotations.push(this.normalizeNode(node, warnings));
-      } catch {
-        skipped++;
+      const nodeWarnings: IntegrationWarning[] = [];
+      const visual = node.extensions?.visual;
+      const rawShape = visual?.shapeType ?? "rect";
+      const rawType = visual?.annotationType ?? this.typeFromShape(rawShape);
+      const shapeType = SUPPORTED_SHAPES.has(rawShape) ? rawShape : "unknown";
+      const type = SUPPORTED_ANNOTATION_TYPES.has(rawType) ? rawType : "unknown";
+      if (type === "unknown") {
+        nodeWarnings.push(makeWarning("UNKNOWN_ANNOTATION_TYPE", `Unsupported annotation type "${rawType}".`, "warning", `nodes[${index}].extensions.visual.annotationType`));
       }
-    }
-
-    if (skipped > 0) {
-      warnings.push({
-        code: 'NODES_SKIPPED',
-        message: `${skipped} node(s) skipped due to limits or errors`,
-        severity: 'info',
+      if (shapeType === "unknown") {
+        nodeWarnings.push(makeWarning("UNKNOWN_SHAPE_TYPE", `Unsupported shape type "${rawShape}".`, "warning", `nodes[${index}].extensions.visual.shapeType`));
+      }
+      const label = typeof visual?.textContent === "string" && visual.textContent.trim() ? visual.textContent.trim() : undefined;
+      annotations.push({
+        id: node.id,
+        type,
+        shapeType,
+        ...(label ? { label, text: label } : {}),
+        spatial: {
+          x: asNumber(node.spatial.x),
+          y: asNumber(node.spatial.y),
+          width: asNumber(node.spatial.width),
+          height: asNumber(node.spatial.height),
+          rotation: asNumber(node.spatial.rotation),
+          zIndex: asNumber(node.spatial.zIndex),
+        },
+        temporal: {
+          startMs: secondsToMs(node.temporal.startTime) ?? 0,
+          endMs: secondsToMs(node.temporal.endTime),
+          ...(typeof node.temporal.duration === "number" ? { durationMs: Math.round(node.temporal.duration * 1000) } : {}),
+        },
+        visual: {
+          color: String(node.visual.color),
+          opacity: asNumber(node.visual.opacity, 1),
+          fill: typeof node.visual.fill === "string" ? node.visual.fill : "transparent",
+          strokeWidth: asNumber(node.visual.strokeWidth, 1),
+        },
+        parentId: node.parentId ?? null,
+        warnings: nodeWarnings,
       });
-    }
-
+    });
     return annotations;
   }
 
-  private normalizeNode(node: UDMNode, warnings: IntegrationWarning[]): NormalizedAnnotation {
-    const nodeWarnings: IntegrationWarning[] = [];
-
-    // Determine annotation type from extensions
-    const { type, shapeType } = this.extractAnnotationType(node, nodeWarnings);
-
-    // Extract text content if present
-    const text = node.extensions.visual?.textContent;
-
-    return {
-      id: node.id,
-      type,
-      shapeType,
-      spatial: {
-        x: node.spatial.x,
-        y: node.spatial.y,
-        width: node.spatial.width,
-        height: node.spatial.height,
-      },
-      temporal: {
-        startMs: node.temporal.startTime,
-        endMs: node.temporal.endTime,
-      },
-      visual: {
-        color: node.visual.color,
-        opacity: node.visual.opacity,
-        fill: typeof node.visual.fill === 'string' ? node.visual.fill : 'transparent',
-      },
-      text,
-      warnings: nodeWarnings,
-    };
+  private normalizeSubtitles(tracks: readonly SubtitleTrack[], cues: readonly SubtitleCue[]): NormalizedSubtitleTrack[] {
+    return tracks.map((track) => {
+      const trackCues = cues.filter((cue) => cue.trackId === track.id);
+      return {
+        id: track.id,
+        language: track.language,
+        label: track.label,
+        visible: track.visible,
+        locked: track.locked,
+        cueCount: trackCues.length,
+        cues: trackCues.map((cue) => ({
+          id: cue.id,
+          startMs: secondsToMs(cue.startTime) ?? 0,
+          endMs: secondsToMs(cue.endTime) ?? 0,
+          textPreview: previewText(cue.text),
+          warnings: cue.endTime <= cue.startTime
+            ? [makeWarning("INVALID_CUE_RANGE", "Cue endTime must be greater than startTime.", "error")]
+            : [],
+        })),
+        warnings: [],
+      };
+    });
   }
 
-  private extractAnnotationType(
-    node: UDMNode,
-    warnings: IntegrationWarning[]
-  ): { type: AnnotationType; shapeType: AnnotationShapeType } {
-    const visual = node.extensions.visual;
-
-    if (!visual) {
-      warnings.push({
-        code: 'NO_VISUAL_EXTENSION',
-        message: 'Node has no visual extension',
-        severity: 'info',
-      });
-      return { type: 'box', shapeType: 'rect' };
-    }
-
-    const shapeType = visual.shapeType || 'rect';
-    const annotationType = visual.annotationType || this.shapeToAnnotationType(shapeType);
-
-    return { type: annotationType, shapeType };
-  }
-
-  private shapeToAnnotationType(shape: AnnotationShapeType): AnnotationType {
-    const map: Record<AnnotationShapeType, AnnotationType> = {
-      rect: 'box',
-      circle: 'ellipse',
-      polygon: 'polygon',
-      arrow: 'arrow',
-      freehand: 'highlight',
-    };
-    return map[shape] || 'box';
-  }
-
-  /**
-   * Normalize subtitle tracks
-   */
-  private normalizeSubtitleTracks(
-    tracks: SubtitleTrack[],
-    cues: SubtitleCue[],
-    warnings: IntegrationWarning[]
-  ): NormalizedSubtitleTrack[] {
-    const cueCountByTrack = new Map<string, number>();
-    for (const cue of cues) {
-      cueCountByTrack.set(cue.trackId, (cueCountByTrack.get(cue.trackId) ?? 0) + 1);
-    }
-
-    return tracks.map((track) => ({
-      id: track.id,
-      language: track.language,
-      label: track.label,
-      visible: track.visible,
-      cueCount: cueCountByTrack.get(track.id) ?? 0,
+  private normalizeTimeline(
+    nodes: readonly UDMNode[],
+    subtitles: readonly NormalizedSubtitleTrack[],
+    warnings: IntegrationWarning[],
+  ): NormalizedTimelineTrack[] {
+    const explicitTracks = nodes.filter((node) => node.type === "track" && node.id);
+    const timeline: NormalizedTimelineTrack[] = explicitTracks.map((node) => ({
+      id: node.id as string,
+      type: "annotation",
+      itemCount: nodes.filter((candidate) => candidate.parentId === node.id).length,
+      warnings: [],
     }));
+    if (timeline.length === 0 && nodes.some((node) => node.type === "annotation")) {
+      timeline.push({ id: "annotations", type: "annotation", itemCount: nodes.filter((node) => node.type === "annotation").length, warnings: [] });
+      warnings.push(makeWarning("IMPLICIT_TIMELINE", "No explicit timeline tracks found; annotations are grouped into an implicit track.", "info", "nodes"));
+    }
+    for (const subtitle of subtitles) {
+      timeline.push({ id: `subtitle:${subtitle.id}`, type: "subtitle", itemCount: subtitle.cueCount, warnings: subtitle.warnings });
+    }
+    return timeline;
   }
 
-  /**
-   * Build timeline tracks from nodes
-   */
-  private buildTimelineTracks(nodes: UDMNode[]): NormalizedTimelineTrack[] {
-    const trackMap = new Map<string, NormalizedTimelineTrack>();
-
-    for (const node of nodes) {
-      if (node.type === 'track') {
-        trackMap.set(node.id, {
-          id: node.id,
-          type: 'annotation',
-          nodeCount: 1,
-        });
-      }
-    }
-
-    // If no explicit tracks, create a default one
-    if (trackMap.size === 0 && nodes.length > 0) {
-      return [{
-        id: 'default',
-        type: 'annotation',
-        nodeCount: nodes.length,
-      }];
-    }
-
-    return Array.from(trackMap.values());
-  }
-
-  /**
-   * Collect unknown fields for preservation from the raw input object
-   */
   private collectUnknownFields(raw: unknown): Record<string, unknown> {
-    if (!this.options.preserveUnknownFields) return {};
-
-    const knownFields = new Set([
-      'version', 'videoUrl', 'videoSource', 'locale',
-      'classroomId', 'classroomName', 'subtitleTracks',
-      'subtitleCues', 'nodes',
-    ]);
-
+    if (!isRecord(raw)) return {};
     const unknown: Record<string, unknown> = {};
-    if (typeof raw === 'object' && raw !== null) {
-      for (const [key, value] of Object.entries(raw)) {
-        if (!knownFields.has(key)) {
-          unknown[key] = value;
-        }
-      }
+    for (const [key, value] of Object.entries(raw)) {
+      if (!KNOWN_PROJECT_FIELDS.has(key)) unknown[key] = value;
     }
     return unknown;
   }
 
-  /**
-   * Compute statistics
-   */
-  private computeStats(annotations: NormalizedAnnotation[], cues: SubtitleCue[]): NormalizedProject['stats'] {
-    const annotationTypes: Record<AnnotationType, number> = {
-      box: 0, polygon: 0, point: 0, arrow: 0, text: 0,
-      image: 0, ellipse: 0, chapter: 0, highlight: 0,
-      comment: 0, tag: 0,
-    };
-
-    const shapeTypes: Record<AnnotationShapeType, number> = {
-      rect: 0, circle: 0, polygon: 0, arrow: 0, freehand: 0,
-    };
-
-    let hasTemporal = false;
-    let hasVisualExt = false;
-    let uniqueColors = new Set<string>();
-
-    for (const ann of annotations) {
-      annotationTypes[ann.type]++;
-      if (ann.shapeType in shapeTypes) {
-        shapeTypes[ann.shapeType as AnnotationShapeType]++;
-      }
-      if (ann.temporal.endMs !== null) hasTemporal = true;
-      if (ann.text) hasVisualExt = true;
-      uniqueColors.add(ann.visual.color);
+  private typeFromShape(shape: string): string {
+    switch (shape) {
+      case "circle":
+        return "ellipse";
+      case "polygon":
+        return "polygon";
+      case "arrow":
+        return "arrow";
+      case "freehand":
+        return "highlight";
+      case "rect":
+      default:
+        return "box";
     }
-
-    return {
-      totalAnnotations: annotations.length,
-      annotationTypes,
-      shapeTypes,
-      subtitleCueCount: cues.length,
-      hasTemporalData: hasTemporal,
-      hasVisualExtensions: hasVisualExt,
-    };
-  }
-
-  /**
-   * Normalize locale
-   */
-  private normalizeLocale(locale: unknown): AppLocale | undefined {
-    if (locale === 'en' || locale === 'ru' || locale === 'kk') {
-      return locale;
-    }
-    return undefined;
-  }
-
-  /**
-   * Validate project consistency
-   */
-  validate(raw: unknown): {
-    valid: boolean;
-    errors: IntegrationWarning[];
-    warnings: IntegrationWarning[];
-    checks: Array<{ name: string; passed: boolean; message?: string }>;
-  } {
-    const errors: IntegrationWarning[] = [];
-    const warnings: IntegrationWarning[] = [];
-    const checks: Array<{ name: string; passed: boolean; message?: string }> = [];
-
-    // Check 1: Valid JSON structure
-    try {
-      this.parsePayload(raw);
-      checks.push({ name: 'Valid JSON structure', passed: true });
-    } catch (e) {
-      errors.push({ code: 'PARSE_ERROR', message: String(e), severity: 'error' });
-      checks.push({ name: 'Valid JSON structure', passed: false, message: String(e) });
-      return { valid: false, errors, warnings, checks };
-    }
-
-    const payload = this.parsePayload(raw);
-
-    // Check 2: Version compatibility
-    checks.push({
-      name: 'Version compatibility',
-      passed: true,
-      message: `Version: ${payload.version}`,
-    });
-
-    // Check 3: Nodes have IDs
-    const nodesWithoutId = payload.nodes.filter((n) => !n.id);
-    if (nodesWithoutId.length > 0) {
-      errors.push({
-        code: 'MISSING_NODE_ID',
-        message: `${nodesWithoutId.length} node(s) missing ID`,
-        severity: 'error',
-      });
-      checks.push({ name: 'All nodes have IDs', passed: false });
-    } else {
-      checks.push({ name: 'All nodes have IDs', passed: true });
-    }
-
-    // Check 4: Valid time ranges
-    const invalidTimeRanges = payload.nodes.filter(
-      (n) => n.temporal && n.temporal.endTime !== null && n.temporal.endTime < n.temporal.startTime
-    );
-    if (invalidTimeRanges.length > 0) {
-      warnings.push({
-        code: 'INVALID_TIME_RANGE',
-        message: `${invalidTimeRanges.length} annotation(s) with endTime < startTime`,
-        severity: 'warning',
-      });
-      checks.push({ name: 'Valid time ranges', passed: false });
-    } else {
-      checks.push({ name: 'Valid time ranges', passed: true });
-    }
-
-    // Check 5: Spatial bounds
-    const outOfBounds = payload.nodes.filter(
-      (n) =>
-        n.spatial &&
-        (n.spatial.x < 0 || n.spatial.y < 0 ||
-          n.spatial.x > 1 || n.spatial.y > 1 ||
-          n.spatial.width <= 0 || n.spatial.height <= 0)
-    );
-    if (outOfBounds.length > 0) {
-      warnings.push({
-        code: 'OUT_OF_BOUNDS',
-        message: `${outOfBounds.length} annotation(s) with out-of-bounds spatial data`,
-        severity: 'warning',
-      });
-      checks.push({ name: 'Spatial bounds valid', passed: false });
-    } else {
-      checks.push({ name: 'Spatial bounds valid', passed: true });
-    }
-
-    // Check 6: Orphaned subtitle cues
-    if (payload.subtitleTracks && payload.subtitleCues) {
-      const trackIds = new Set(payload.subtitleTracks.map((t) => t.id));
-      const orphanedCues = payload.subtitleCues.filter((c) => !trackIds.has(c.trackId));
-      if (orphanedCues.length > 0) {
-        warnings.push({
-          code: 'ORPHANED_CUES',
-          message: `${orphanedCues.length} cue(s) referencing non-existent track`,
-          severity: 'warning',
-        });
-        checks.push({ name: 'Subtitle cue track references valid', passed: false });
-      } else {
-        checks.push({ name: 'Subtitle cue track references valid', passed: true });
-      }
-    }
-
-    // Check 7: Subtitle cue time validity
-    if (payload.subtitleCues) {
-      const invalidCues = payload.subtitleCues.filter((c) => c.endTime <= c.startTime);
-      if (invalidCues.length > 0) {
-        errors.push({
-          code: 'INVALID_CUE_TIME',
-          message: `${invalidCues.length} subtitle cue(s) with invalid time range`,
-          severity: 'error',
-        });
-        checks.push({ name: 'Subtitle cue times valid', passed: false });
-      } else {
-        checks.push({ name: 'Subtitle cue times valid', passed: true });
-      }
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-      warnings,
-      checks,
-    };
   }
 }
 
-// ────────────────────────────────────────────────────
-// Singleton instance
-// ────────────────────────────────────────────────────
 export const adapter = new Anotator8Adapter();

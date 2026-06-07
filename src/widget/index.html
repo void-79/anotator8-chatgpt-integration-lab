@@ -1,0 +1,24 @@
+<div id="app" class="review-widget">
+  <header>
+    <p class="eyebrow">Anotator8</p>
+    <h1>Project Review</h1>
+    <p id="status">Waiting for tool output</p>
+  </header>
+  <section class="metrics" aria-label="Project metrics">
+    <div><span id="annotation-count">0</span><small>annotations</small></div>
+    <div><span id="subtitle-count">0</span><small>subtitle cues</small></div>
+    <div><span id="warning-count">0</span><small>warnings</small></div>
+  </section>
+  <section>
+    <h2>Warnings</h2>
+    <ul id="warnings"></ul>
+  </section>
+  <section id="focus-panel" hidden>
+    <h2>Review Focus</h2>
+    <div class="actions">
+      <button type="button" data-focus="annotations">Annotations</button>
+      <button type="button" data-focus="subtitles">Subtitles</button>
+      <button type="button" data-focus="timeline">Timeline</button>
+    </div>
+  </section>
+</div>

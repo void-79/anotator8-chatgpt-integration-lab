@@ -1,0 +1,21 @@
+{
+  "mode": "read-only-mvp",
+  "maxProjectBytes": 10485760,
+  "fixtures": ["sample-project"],
+  "enabledTools": [
+    "list_capabilities",
+    "inspect_project",
+    "validate_project",
+    "summarize_annotations",
+    "find_annotations",
+    "suggest_labels",
+    "create_review_plan",
+    "export_chatgpt_report"
+  ],
+  "disabledFutureTools": [
+    "propose_annotation_changes",
+    "apply_annotation_patch",
+    "generate_subtitle_cleanup_patch",
+    "suggest_timeline_markers"
+  ]
+}

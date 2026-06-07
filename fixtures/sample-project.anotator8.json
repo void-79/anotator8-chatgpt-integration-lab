@@ -1,0 +1,130 @@
+{
+  "version": "24.0.0",
+  "videoUrl": "https://example.invalid/anotator8-demo.mp4",
+  "videoSource": {
+    "kind": "direct-url",
+    "url": "https://example.invalid/anotator8-demo.mp4",
+    "duration": 72.4
+  },
+  "locale": "en",
+  "classroomId": "demo-classroom",
+  "classroomName": "Synthetic Demo Classroom",
+  "subtitleTracks": [
+    {
+      "id": "track-en",
+      "language": "en",
+      "label": "English",
+      "visible": true,
+      "locked": false
+    }
+  ],
+  "subtitleCues": [
+    {
+      "id": "cue-001",
+      "trackId": "track-en",
+      "startTime": 0,
+      "endTime": 3.2,
+      "text": {
+        "en": "Opening context for the demonstration.",
+        "ru": "",
+        "kk": ""
+      },
+      "style": {
+        "fontFamily": "system-ui",
+        "fontSize": 36,
+        "color": "#ffffff",
+        "backgroundColor": "transparent",
+        "outlineColor": "#000000",
+        "outlineWidth": 2,
+        "shadow": true,
+        "align": "center",
+        "verticalPosition": "bottom"
+      },
+      "animation": { "type": "none" }
+    },
+    {
+      "id": "cue-orphan",
+      "trackId": "missing-track",
+      "startTime": 9,
+      "endTime": 12,
+      "text": {
+        "en": "This intentional orphan cue proves validation warnings.",
+        "ru": "",
+        "kk": ""
+      },
+      "style": {
+        "fontFamily": "system-ui",
+        "fontSize": 36,
+        "color": "#ffffff",
+        "backgroundColor": "transparent",
+        "outlineColor": "#000000",
+        "outlineWidth": 2,
+        "shadow": true,
+        "align": "center",
+        "verticalPosition": "bottom"
+      },
+      "animation": { "type": "none" }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "ann-box-001",
+      "type": "annotation",
+      "spatial": { "x": 0.12, "y": 0.18, "width": 0.24, "height": 0.18, "rotation": 0, "zIndex": 1 },
+      "temporal": { "startTime": 4, "endTime": 14, "duration": 10 },
+      "visual": { "color": "#e11d48", "opacity": 1, "strokeWidth": 2, "fill": "transparent" },
+      "extensions": { "visual": { "shapeType": "rect", "annotationType": "box", "textContent": "Teacher points to key object" } },
+      "sync": { "serverSeq": 1, "localOpId": "op-001", "nodeId": "client-demo", "lastSyncedAt": "2026-06-07T00:00:00.000Z", "properties": {}, "integrity": {} },
+      "parentId": null,
+      "fractionalIndex": "a0",
+      "createdAt": "2026-06-07T00:00:00.000Z",
+      "updatedAt": "2026-06-07T00:00:00.000Z",
+      "deletedAt": null,
+      "ownerId": "demo-user",
+      "isEducationRecord": true,
+      "dataResidency": "kz-central"
+    },
+    {
+      "id": "ann-ellipse-001",
+      "type": "annotation",
+      "spatial": { "x": 0.55, "y": 0.25, "width": 0.18, "height": 0.22, "rotation": 0, "zIndex": 2 },
+      "temporal": { "startTime": 16, "endTime": 28, "duration": 12 },
+      "visual": { "color": "#2563eb", "opacity": 0.85, "strokeWidth": 3, "fill": "#2563eb22" },
+      "extensions": { "visual": { "shapeType": "circle", "annotationType": "ellipse", "textContent": "Student response area" } },
+      "sync": { "serverSeq": 2, "localOpId": "op-002", "nodeId": "client-demo", "lastSyncedAt": "2026-06-07T00:00:00.000Z", "properties": {}, "integrity": {} },
+      "parentId": null,
+      "fractionalIndex": "a1",
+      "createdAt": "2026-06-07T00:00:00.000Z",
+      "updatedAt": "2026-06-07T00:00:00.000Z",
+      "deletedAt": null,
+      "ownerId": "demo-user",
+      "isEducationRecord": true,
+      "dataResidency": "kz-central"
+    },
+    {
+      "id": "ann-arrow-001",
+      "type": "annotation",
+      "spatial": { "x": 0.22, "y": 0.58, "width": 0.36, "height": 0.08, "rotation": 0, "zIndex": 3 },
+      "temporal": { "startTime": 30, "endTime": null, "duration": 42.4 },
+      "visual": { "color": "#16a34a", "opacity": 1, "strokeWidth": 2, "fill": "transparent" },
+      "extensions": { "visual": { "shapeType": "arrow", "annotationType": "arrow" } },
+      "sync": { "serverSeq": 3, "localOpId": "op-003", "nodeId": "client-demo", "lastSyncedAt": "2026-06-07T00:00:00.000Z", "properties": {}, "integrity": {} },
+      "parentId": null,
+      "fractionalIndex": "a2",
+      "createdAt": "2026-06-07T00:00:00.000Z",
+      "updatedAt": "2026-06-07T00:00:00.000Z",
+      "deletedAt": null,
+      "ownerId": "demo-user",
+      "isEducationRecord": true,
+      "dataResidency": "kz-central"
+    }
+  ],
+  "futureReviewState": {
+    "schema": "synthetic-field-for-preservation",
+    "notes": ["Unknown fields must remain visible to the adapter."]
+  },
+  "_fixture": {
+    "synthetic": true,
+    "evidence": "Built from Anotator8 24.0.0 projectFile, UDMNode, videoSources, and subtitleStore shapes."
+  }
+}
