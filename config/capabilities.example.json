@@ -1,0 +1,227 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/capabilities",
+  "name": "anotator8-chatgpt-lab",
+  "version": "0.2.0",
+  "description": "Read-only MCP server for Anotator8 video annotation project analysis and review via ChatGPT",
+
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    },
+    "prompts": {
+      "listChanged": false
+    },
+    "resources": {
+      "listChanged": false
+    }
+  },
+
+  "tools": [
+    {
+      "name": "list_capabilities",
+      "title": "List Anotator8 Integration Capabilities",
+      "description": "Returns all supported features, limitations, and supported annotation types for the Anotator8 ChatGPT integration.",
+      "readOnly": true,
+      "inputSchema": {},
+      "outputSchema": {
+        "supportedFeatures": { "type": "array", "items": { "type": "string" } },
+        "limitations": { "type": "array", "items": { "type": "string" } },
+        "annotationTypes": { "type": "array", "items": { "type": "string" } },
+        "supportedSubtitleLanguages": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    {
+      "name": "inspect_project",
+      "title": "Inspect Anotator8 Project",
+      "description": "Analyze an Anotator8 project JSON and return a normalized summary including video source metadata, annotation counts, subtitle tracks, and warnings.",
+      "readOnly": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectData": {
+            "type": "unknown",
+            "description": "Anotator8 project JSON (.anatator8.json format)"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Optional human-readable identifier for the project"
+          }
+        },
+        "required": ["projectData"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string" },
+          "version": { "type": "string" },
+          "source": {
+            "type": "object",
+            "properties": {
+              "kind": { "type": "string" },
+              "label": { "type": "string" },
+              "durationMs": { "type": "number" },
+              "warnings": { "type": "array" }
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "totalAnnotations": { "type": "number" },
+              "annotationTypes": { "type": "object" },
+              "shapeTypes": { "type": "object" },
+              "subtitleCueCount": { "type": "number" },
+              "hasTemporalData": { "type": "boolean" },
+              "hasVisualExtensions": { "type": "boolean" }
+            }
+          },
+          "rawSummary": {
+            "type": "object",
+            "properties": {
+              "nodeCount": { "type": "number" },
+              "trackCount": { "type": "number" },
+              "version": { "type": "string" }
+            }
+          },
+          "warnings": { "type": "array" }
+        }
+      }
+    },
+    {
+      "name": "validate_project",
+      "title": "Validate Anotator8 Project",
+      "description": "Check Anotator8 project data for consistency issues including missing IDs, invalid time ranges, and orphaned subtitle cues.",
+      "readOnly": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectData": {
+            "type": "unknown",
+            "description": "Anotator8 project JSON to validate"
+          }
+        },
+        "required": ["projectData"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "valid": { "type": "boolean" },
+          "errors": { "type": "array" },
+          "warnings": { "type": "array" },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "passed": { "type": "boolean" },
+                "message": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "summarize_annotations",
+      "title": "Summarize Annotations",
+      "description": "Generate statistics about annotation distribution by type, shape, temporal range, and visual properties.",
+      "readOnly": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectData": {
+            "type": "unknown",
+            "description": "Anotator8 project JSON"
+          }
+        },
+        "required": ["projectData"]
+      }
+    },
+    {
+      "name": "find_annotations",
+      "title": "Find Annotations",
+      "description": "Query and filter annotations by type, shape, time range, text content, or color.",
+      "readOnly": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectData": { "type": "unknown" },
+          "filters": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["box", "ellipse", "arrow", "polygon", "point", "text", "highlight", "comment", "tag"] },
+              "shapeType": { "type": "string", "enum": ["rect", "circle", "polygon", "arrow", "freehand"] },
+              "timeRange": {
+                "type": "object",
+                "properties": {
+                  "startMs": { "type": "number" },
+                  "endMs": { "type": "number" }
+                }
+              },
+              "hasText": { "type": "boolean" },
+              "color": { "type": "string" }
+            }
+          },
+          "limit": { "type": "number", "minimum": 1, "maximum": 100, "default": 50 }
+        },
+        "required": ["projectData"]
+      }
+    },
+    {
+      "name": "create_review_plan",
+      "title": "Create Review Plan",
+      "description": "Generate a structured manual review checklist for the Anotator8 project.",
+      "readOnly": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectData": { "type": "unknown" }
+        },
+        "required": ["projectData"]
+      }
+    },
+    {
+      "name": "export_chatgpt_report",
+      "title": "Export ChatGPT Report",
+      "description": "Generate a portable Markdown or JSON report summarizing the Anotator8 project.",
+      "readOnly": true,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectData": { "type": "unknown" },
+          "format": { "type": "string", "enum": ["markdown", "json"], "default": "markdown" },
+          "includeUnknownFields": { "type": "boolean", "default": false }
+        },
+        "required": ["projectData"]
+      }
+    }
+  ],
+
+  "prompts": [
+    {
+      "name": "project_review",
+      "description": "Structured review of Anotator8 annotations, subtitles, and quality checks (Russian)",
+      "arguments": [
+        { "name": "projectData", "description": "Anotator8 project JSON", "required": true },
+        { "name": "focus", "description": "Focus area", "enum": ["all", "annotations", "subtitles", "quality"], "default": "all" }
+      ]
+    }
+  ],
+
+  "resources": [
+    {
+      "uri": "ui://widget/anotator8-widget.html",
+      "name": "anotator8-widget",
+      "description": "Interactive project summary panel for ChatGPT",
+      "mimeType": "text/html;profile=mcp-app"
+    }
+  ],
+
+  "security": {
+    "readOnly": true,
+    "maxInputSizeBytes": 10485760,
+    "noFileSystemAccess": true,
+    "noShellCommands": true,
+    "noSecretReading": true
+  }
+}

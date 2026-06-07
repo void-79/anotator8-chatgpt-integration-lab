@@ -211,9 +211,14 @@ The widget receives tool results via the MCP Apps bridge (`ui/notifications/tool
 
 Environment variables (`.env`):
 ```bash
-ANOTATOR8_PROJECT_PATH=./fixtures/sample-project.anatator8.json
+# See .env.example for the full list. Key vars:
 MCP_HOST=127.0.0.1
 MCP_PORT=8787
-MAX_PROJECT_SIZE=10485760
-MAX_ANNOTATIONS_SUMMARY=1000
+MCP_AUTH_TOKEN=                 # leave empty in dev; set random 32-byte hex in prod
+RATE_LIMIT_MAX=100
+RATE_LIMIT_WINDOW_MS=60000
+CORS_ORIGIN=*
 ```
+
+The server **does not** read any `ANOTATOR8_*_PATH` env var — project JSON is passed in tool
+arguments. This is by design (no filesystem access).

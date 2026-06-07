@@ -8,21 +8,21 @@ An MCP server that exposes Anotator8 project data as read-only tools for AI assi
 # 1. Install dependencies
 npm install
 
-# 2. Configure environment
+# 2. Configure environment (optional — server works with defaults)
 cp .env.example .env
-# Edit .env — set ANOTATOR8_DATA_PATH to your project folder
+# Edit .env — set MCP_AUTH_TOKEN for production, or leave empty for local dev.
 
 # 3. Start the server
 npm run dev
-# → http://localhost:3100
+# → http://127.0.0.1:8787
 
 # 4. Run smoke test
 npm run smoke
 # → 6/6 checks pass
 
-# 5. Run unit tests
+# 5. Run tests (unit + integration + contract)
 npm test
-# → 17/17 pass
+# → 105/105 pass
 ```
 
 ## Architecture
@@ -71,23 +71,26 @@ All tools are **read-only** — they never modify project data.
 
 ## Project Data Format
 
-The server reads `.anatator8.json` project files. You can point it at:
+The server is **read-only with zero filesystem access** — Anotator8 project JSON is passed
+**in tool arguments**, not loaded from disk. The shape is `ProjectFilePayload` (see
+`src/shared/types.ts`):
 
-- A **single file**: `ANOTATOR8_DATA_PATH=./my-project.anatator8.json`
-- A **directory**: `ANOTATOR8_DATA_PATH=./projects/` (reads all `.anatator8.json` files)
-
-To find your project files, look in Anotator8's data directory:
-
-```bash
-# macOS
-~/Library/Application Support/anotator8/
-
-# Linux
-~/.config/anotator8/
-
-# Windows
-%APPDATA%/anotator8/
+```typescript
+{
+  version: string;          // e.g. "24.0.0"
+  videoUrl?: string;
+  videoSource?: { kind: "local-file" | "direct-url" | "youtube" | "demo"; ... };
+  locale?: "en" | "ru" | "kk";
+  classroomId?: string;
+  classroomName?: string;
+  subtitleTracks?: SubtitleTrack[];
+  subtitleCues?: SubtitleCue[];
+  nodes: UDMNode[];         // annotations + shapes
+}
 ```
+
+A complete sample is at `fixtures/sample-project.anotator8.json` (5 annotations, 2 subtitle
+tracks, 3 cues, plus a `loroState` future-field to prove unknown-field preservation).
 
 ## Environment Variables
 

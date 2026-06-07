@@ -1,9 +1,25 @@
 node_modules/
 dist/
 .env
+.worktrees/
+.mavis/
 
+# Build / runtime artifacts
 *.log
 *.local
+*.tsbuildinfo
 
+# Stale log captures from earlier dev runs
+err.txt
+out.txt
+server-err.txt
+server-out.txt
+
+# Verification log captures from re-verification sessions
+live*-*.txt
+verify-*.txt
+smoke-server-*.txt
+
+# OS junk
 .DS_Store
 Thumbs.db

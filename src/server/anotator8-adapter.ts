@@ -43,8 +43,19 @@ export class Anotator8Adapter {
 
   /**
    * Parse raw project data into NormalizedProject
+   * @throws Error if input exceeds MAX_PROJECT_SIZE bytes
    */
   normalize(raw: unknown): NormalizedProject {
+    // Enforce documented size limit (10MB default)
+    const jsonString = typeof raw === 'string' ? raw : JSON.stringify(raw);
+    const MAX_PROJECT_SIZE = 10 * 1024 * 1024; // 10MB
+    if (jsonString.length > MAX_PROJECT_SIZE) {
+      throw new Error(
+        `Project data exceeds maximum size of ${MAX_PROJECT_SIZE} bytes (received ${jsonString.length} bytes). ` +
+        `Consider splitting the project or reducing annotation density.`
+      );
+    }
+
     const payload = this.parsePayload(raw);
     const warnings: IntegrationWarning[] = [];
 
@@ -152,6 +163,31 @@ export class Anotator8Adapter {
   }
 
   /**
+   * YouTube URL patterns — mirrors `application/videoSources.ts` in Anotator8.
+   * 5 patterns: watch, youtu.be, embed, shorts, live.
+   * REPO_EVIDENCE: C:\Anotator8\src\application\videoSources.ts
+   */
+  private static readonly YOUTUBE_PATTERNS: ReadonlyArray<RegExp> = [
+    /(?:youtube\.com\/watch\?v=)([\w-]{6,})/i,
+    /(?:youtu\.be\/)([\w-]{6,})/i,
+    /(?:youtube\.com\/embed\/)([\w-]{6,})/i,
+    /(?:youtube\.com\/shorts\/)([\w-]{6,})/i,
+    /(?:youtube\.com\/live\/)([\w-]{6,})/i,
+  ];
+
+  /**
+   * Try to extract a YouTube video id from a URL.
+   * Returns the id or null.
+   */
+  private matchYouTubeId(input: string): string | null {
+    for (const pattern of Anotator8Adapter.YOUTUBE_PATTERNS) {
+      const m = input.match(pattern);
+      if (m?.[1]) return m[1];
+    }
+    return null;
+  }
+
+  /**
    * Normalize video source
    */
   private normalizeVideoSource(
@@ -171,15 +207,20 @@ export class Anotator8Adapter {
       return this.normalizeVideoSourceInput(videoSource);
     }
 
-    // Infer from videoUrl
+    // Infer from videoUrl — try full YouTube patterns first
     if (videoUrl) {
-      if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+      const ytId = this.matchYouTubeId(videoUrl);
+      if (ytId) {
         return {
           kind: 'youtube',
-          label: videoUrl,
+          label: `YouTube: ${ytId}`,
           url: videoUrl,
           warnings: [
-            { code: 'INFERRED_SOURCE', message: 'Video source inferred from videoUrl', severity: 'info' },
+            {
+              code: 'INFERRED_SOURCE',
+              message: `Video source inferred as YouTube (id=${ytId}) from videoUrl`,
+              severity: 'info',
+            },
           ],
         };
       }
@@ -291,6 +332,32 @@ export class Anotator8Adapter {
     // Extract text content if present
     const text = node.extensions.visual?.textContent;
 
+    // Preserve ALL extensions as raw record (visual, studio, blocks, code).
+    // REPO_EVIDENCE: UDMNode NodeExtensions includes visual|studio|blocks|code
+    // (C:\Anotator8\src\domain\entities\UDMNode.ts). Lab only normalizes visual
+    // — others must be preserved for round-trip / porting integrity.
+    const preservedExtensions = this.captureNodeExtensions(node);
+
+    // Warn if SyncMetadata is missing (real Anotator8 requires it; lab is graceful).
+    // REPO_EVIDENCE: UDMNode.sync is required in Anotator8.
+    if (!node.sync) {
+      nodeWarnings.push({
+        code: 'MISSING_SYNC_METADATA',
+        message: 'Node is missing required SyncMetadata; ChatGPT integration will treat it as unsynced.',
+        severity: 'warning',
+      });
+    }
+
+    // Warn if v24.0 Loro snapshot is present but unexpectedly empty.
+    // REPO_EVIDENCE: VisualExtension.loroState is "Active in v24.0 GA".
+    if (node.extensions.visual?.loroState === '') {
+      nodeWarnings.push({
+        code: 'EMPTY_LORO_STATE',
+        message: 'Visual extension has empty loroState — likely mid-edit snapshot.',
+        severity: 'info',
+      });
+    }
+
     return {
       id: node.id,
       type,
@@ -311,8 +378,23 @@ export class Anotator8Adapter {
         fill: typeof node.visual.fill === 'string' ? node.visual.fill : 'transparent',
       },
       text,
+      extensions: preservedExtensions,
       warnings: nodeWarnings,
     };
+  }
+
+  /**
+   * Capture the full extensions object so blocks / code / studio / visual.loroState
+   * survive normalization unchanged. Returns an empty object when extensions is missing.
+   */
+  private captureNodeExtensions(node: UDMNode): Record<string, unknown> {
+    if (!node.extensions || typeof node.extensions !== 'object') return {};
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(node.extensions)) {
+      if (value === undefined) continue;
+      result[key] = value as unknown;
+    }
+    return result;
   }
 
   private extractAnnotationType(

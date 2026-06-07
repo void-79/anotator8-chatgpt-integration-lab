@@ -1,7 +1,7 @@
 {
   "name": "anotator8-chatgpt-integration-lab",
-  "version": "0.1.0",
-  "description": "Anotator8 × ChatGPT Integration Lab - MCP server for video annotation review",
+  "version": "0.2.0",
+  "description": "Anotator8 ChatGPT Integration Lab — read-only MCP server, adapter, widget, and porting guide",
   "private": true,
   "type": "module",
   "main": "dist/index.js",

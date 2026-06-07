@@ -71,6 +71,8 @@ export type AnnotationType =
 export interface VisualExtension {
   readonly shapeType: AnnotationShapeType;
   readonly textContent?: string;
+  /** Base64-encoded Loro snapshot. Active in v24.0 GA. REPO_EVIDENCE: UDMNode.ts */
+  readonly loroState?: string;
   readonly points?: ReadonlyArray<{ readonly x: NormalizedFloat; readonly y: NormalizedFloat }>;
   readonly fontSize?: number;
   readonly fontStyle?: 'normal' | 'italic' | 'bold';
@@ -81,11 +83,47 @@ export interface StudioExtension {
   readonly volumeMultiplier: number;
   readonly audioPan: number;
   readonly isLocked: boolean;
+  readonly opacityKeyframes?: ReadonlyArray<{
+    readonly timeOffset: number;
+    readonly value: NormalizedFloat;
+  }>;
+}
+
+export interface BlocksExtension {
+  readonly blockLayoutType: 'grid' | 'flex' | 'absolute';
+  readonly borderStyle: 'solid' | 'dashed' | 'none';
+  readonly childConnectionIds: ReadonlyArray<ObjectID>;
+}
+
+/**
+ * Code extension payload.
+ * @deprecated Not in shipped demo path. Preserved for round-trip integrity.
+ */
+export interface CodeExtension {
+  readonly codeLanguage: 'javascript' | 'typescript' | 'python';
+  readonly sourceCode: string;
+  readonly loroState?: string;
+  readonly sandboxCapabilities: ReadonlyArray<string>;
 }
 
 export interface NodeExtensions {
   readonly visual?: VisualExtension;
   readonly studio?: StudioExtension;
+  readonly blocks?: BlocksExtension;
+  readonly code?: CodeExtension;
+}
+
+export interface SyncMetadata {
+  readonly serverSeq: number;
+  readonly localOpId: string;
+  readonly nodeId: string;
+  readonly lastSyncedAt: string;
+  readonly properties: Readonly<Record<string, unknown>>;
+  readonly integrity: {
+    readonly parentHash: string;
+    readonly signature: string;
+    readonly publicKey: string;
+  };
 }
 
 export interface UDMNode {
@@ -95,11 +133,18 @@ export interface UDMNode {
   readonly temporal: TemporalData;
   readonly visual: VisualData;
   readonly extensions: NodeExtensions;
+  /** REPO_EVIDENCE: required in real Anotator8. Lab adapter warns (not fails) when missing. */
+  readonly sync?: SyncMetadata;
   readonly parentId: ObjectID | null;
   readonly fractionalIndex: string;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly deletedAt: string | null;
+  // FERPA / COPPA / GDPR compliance — REPO_EVIDENCE
+  readonly ownerId?: string;
+  readonly classroomId?: string;
+  readonly isEducationRecord?: boolean;
+  readonly dataResidency?: 'us-east' | 'eu-central' | 'us-west' | 'kz-central';
 }
 
 // ────────────────────────────────────────────────────
@@ -202,6 +247,13 @@ export interface NormalizedAnnotation {
     readonly fill: string;
   };
   readonly text?: string;
+  /**
+   * Full preserved NodeExtensions payload (visual|studio|blocks|code).
+   * REPO_EVIDENCE: Anotator8 UDMNode NodeExtensions has all four.
+   * The lab normalizes `visual` into the typed fields above; the rest
+   * (and any unrecognized sub-fields) are kept here verbatim.
+   */
+  readonly extensions: Record<string, unknown>;
   readonly warnings: IntegrationWarning[];
 }
 
@@ -261,12 +313,26 @@ export interface CapabilitiesResult {
 
 export interface InspectProjectResult {
   readonly projectId: string;
-  readonly normalizedProject: NormalizedProject;
+  readonly version: string;
+  readonly source: {
+    readonly kind: string;
+    readonly label: string;
+    readonly durationMs: number;
+    readonly warnings: readonly string[];
+  };
+  readonly stats: {
+    readonly totalAnnotations: number;
+    readonly byType: Record<string, number>;
+    readonly byShape: Record<string, number>;
+    readonly hasTemporalData: boolean;
+    readonly hasVisualExtensions: boolean;
+  };
   readonly rawSummary: {
     readonly nodeCount: number;
     readonly trackCount: number;
     readonly version: string;
   };
+  readonly warnings: readonly string[];
 }
 
 export interface ValidateProjectResult {
