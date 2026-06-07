@@ -38,6 +38,13 @@ h2 {
   margin: 6px 0 0;
 }
 
+.bridge-info {
+  color: #5b6b75;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin: 4px 0 0;
+}
+
 .metrics {
   display: grid;
   gap: 8px;

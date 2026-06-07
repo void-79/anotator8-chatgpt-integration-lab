@@ -21,7 +21,21 @@ export function main(): void {
 
   httpServer.listen(port, host, () => {
     process.stderr.write(`${SERVER_NAME} ${SERVER_VERSION} listening on http://${host}:${port}/mcp\n`);
-    process.stderr.write(process.env.MCP_AUTH_TOKEN ? "Auth: Bearer token required\n" : "Auth: disabled for local demo\n");
+    if (process.env.MCP_AUTH_TOKEN) {
+      const tokens = process.env.MCP_AUTH_TOKEN.split(",").map((t) => t.trim()).filter(Boolean);
+      process.stderr.write(`Auth: Bearer token required (${tokens.length} token(s) accepted).\n`);
+    } else {
+      const banner = [
+        "================================================================",
+        " WARNING: MCP_AUTH_TOKEN is unset.",
+        " This mode is intended ONLY for local development (localhost).",
+        " Any reachable network client can call all 8 read-only tools.",
+        " BEFORE exposing on a public tunnel: set MCP_AUTH_TOKEN=<random>.",
+        " See docs/SECURITY.md and docs/CHATGPT_APP_SETUP.md.",
+        "================================================================",
+      ].join("\n");
+      process.stderr.write(`\n${banner}\n\n`);
+    }
   });
 }
 

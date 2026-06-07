@@ -43,6 +43,25 @@ const SUPPORTED_ANNOTATION_TYPES = new Set([
 const SUPPORTED_SHAPES = new Set(["rect", "circle", "polygon", "arrow", "freehand"]);
 const MAX_PROJECT_BYTES = 10 * 1024 * 1024;
 
+// REPO_EVIDENCE: C:\Anotator8\src\application\videoSources.ts:38-44
+// Anotator8's parseYouTubeVideoId accepts 5 URL shapes. We mirror them so
+// inferred source kinds match what the real product would say.
+const YOUTUBE_URL_PATTERNS: ReadonlyArray<RegExp> = [
+  /(?:youtube\.com\/watch\?v=)([\w-]{6,})/i,
+  /(?:youtu\.be\/)([\w-]{6,})/i,
+  /(?:youtube\.com\/embed\/)([\w-]{6,})/i,
+  /(?:youtube\.com\/shorts\/)([\w-]{6,})/i,
+  /(?:youtube\.com\/live\/)([\w-]{6,})/i,
+];
+
+export function parseYouTubeVideoId(input: string): string | null {
+  for (const pattern of YOUTUBE_URL_PATTERNS) {
+    const match = input.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -262,7 +281,7 @@ export class Anotator8Adapter {
     }
     if (payload.videoUrl) {
       sourceWarnings.push(makeWarning("INFERRED_SOURCE", "Source kind inferred from videoUrl because videoSource is absent.", "info", "videoUrl"));
-      const isYoutube = /youtube\.com|youtu\.be/i.test(payload.videoUrl);
+      const isYoutube = parseYouTubeVideoId(payload.videoUrl) !== null;
       return {
         kind: isYoutube ? "youtube" : "direct-url",
         label: payload.videoUrl,
