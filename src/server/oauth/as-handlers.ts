@@ -4,7 +4,7 @@
  * Authorization-server request handlers. These are wired into the
  * lab's HTTP MCP app (createHttpMcpApp) in app.ts.
  *
- * Endpoints exposed:
+ * Endpoints exposed (LOCAL mode only — see createAsHandlers):
  *   GET  /.well-known/oauth-authorization-server
  *   GET  /.well-known/openid-configuration
  *   GET  /oauth/jwks.json
@@ -12,6 +12,10 @@
  *   POST /oauth2/v1/authorize          (consent decision)
  *   POST /oauth2/v1/token
  *   POST /oauth2/v1/register
+ *
+ * In EXTERNAL mode, all routes above return HTTP 404 with
+ * `error: "as_disabled"` so clients fail fast and fall back to
+ * the external IdP (see docs/OAUTH_AS.md).
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { URL } from "node:url";
@@ -22,15 +26,18 @@ import {
 } from "./authorization-server-metadata.js";
 import { AuthorizationCodeStore } from "./authorization-code-store.js";
 import { renderConsentPage } from "./consent-page.js";
-import { createTokenIssuer, TokenValidationError, type TokenIssuer } from "./token-issuer.js";
+import { TokenValidationError, type TokenValidator } from "./token-issuer.js";
 import { ClientRegistry, DcrValidationError } from "./dcr.js";
 import { CimdResolver, CimdResolveError } from "./cimd.js";
 import { codeChallengeS256, generateCodeVerifier, verifyCodeChallenge } from "./pkce.js";
 import { audit } from "../audit.js";
 
 export interface AsHandlerDeps {
+  readonly mode: "local" | "external";
   readonly asConfig: AuthorizationServerConfig;
-  readonly tokenIssuer: TokenIssuer;
+  readonly validator: TokenValidator;
+  /** Only set in local mode. Used by the in-process AS to issue tokens. */
+  readonly localIssuer?: import("./token-issuer.js").TokenIssuer;
   readonly codeStore: AuthorizationCodeStore;
   readonly clientRegistry: ClientRegistry;
   readonly cimdResolver: CimdResolver;
@@ -56,6 +63,13 @@ export async function handleAsRequest(
   deps: AsHandlerDeps,
 ): Promise<AsHandlerResult> {
   const path = url.pathname;
+  // In external mode, short-circuit all AS routes to 404 with a
+  // descriptive error so clients know to use the external IdP.
+  if (deps.mode === "external") {
+    return {
+      handled: sendAsDisabled(res, path),
+    };
+  }
   if (req.method === "GET" && (path === "/.well-known/oauth-authorization-server" || path === "/.well-known/openid-configuration")) {
     return { handled: serveAsMetadata(res, deps) };
   }
@@ -78,6 +92,20 @@ export async function handleAsRequest(
 
 // -- handlers ---------------------------------------------------------------
 
+function sendAsDisabled(res: ServerResponse, path: string): boolean {
+  audit({
+    tool: "oauth-as",
+    status: "error",
+    summary: `rejected request to ${path}: in-process AS is disabled (MCP_OAUTH_MODE=external)`,
+  });
+  return sendJson(res, 404, {
+    error: "as_disabled",
+    error_description:
+      "This lab is configured to use an external IdP (MCP_OAUTH_MODE=external). The in-process AS endpoints are not available. Point your client at the external IdP's discovery document and use its token endpoint.",
+    path,
+  });
+}
+
 function serveAsMetadata(res: ServerResponse, deps: AsHandlerDeps): boolean {
   const doc = buildAuthorizationServerMetadata(deps.asConfig);
   writeAuthorizationServerMetadataResponse(res, doc);
@@ -90,7 +118,7 @@ function serveJwks(res: ServerResponse, deps: AsHandlerDeps): boolean {
     "cache-control": "public, max-age=300",
     "access-control-allow-origin": "*",
   });
-  res.end(JSON.stringify(deps.tokenIssuer.jwks));
+  res.end(JSON.stringify(deps.validator.jwks));
   return true;
 }
 
@@ -232,7 +260,7 @@ async function serveToken(req: IncomingMessage, res: ServerResponse, deps: AsHan
     return sendJson(res, 400, { error: "invalid_target", error_description: "Resource mismatch between authorization and token request" });
   }
   const effectiveResource = codeRecord.resource ?? resource ?? deps.resource;
-  const issued = deps.tokenIssuer.issue({
+  const issued = deps.localIssuer!.issue({
     clientId,
     scope: codeRecord.scope,
     resource: effectiveResource,
@@ -242,7 +270,7 @@ async function serveToken(req: IncomingMessage, res: ServerResponse, deps: AsHan
   return sendJson(res, 200, {
     access_token: issued.token,
     token_type: "Bearer",
-    expires_in: deps.tokenIssuer.config.tokenTtlSeconds,
+    expires_in: deps.localIssuer!.config.tokenTtlSeconds,
     scope: codeRecord.scope.join(" "),
   });
 }
@@ -362,20 +390,24 @@ export interface AsHandlerBundle extends AsHandlerDeps {
   readonly handle: (req: IncomingMessage, res: ServerResponse, url: URL) => Promise<AsHandlerResult>;
 }
 
-export function createAsHandlers(options: {
+export interface CreateAsHandlersOptions {
+  mode: "local" | "external";
   asConfig: AuthorizationServerConfig;
+  /**
+   * A `TokenValidator` (and optional `TokenIssuer` for local mode).
+   * In local mode pass the result of `createIssuerFactory`; in
+   * external mode the same — the factory decides which to wire.
+   */
+  validator: TokenValidator;
+  localIssuer?: import("./token-issuer.js").TokenIssuer;
   resource: string;
   defaultSubject: string;
   tokenTtlSeconds: number;
   cimdAllowInsecureHttp: boolean;
   cimdAllowlistHostnames: ReadonlyArray<string>;
-}): AsHandlerBundle {
-  const tokenIssuer = createTokenIssuer({
-    issuer: stripTrailingSlash(options.asConfig.issuer),
-    resource: options.resource,
-    tokenTtlSeconds: options.tokenTtlSeconds,
-    defaultSubject: options.defaultSubject,
-  });
+}
+
+export function createAsHandlers(options: CreateAsHandlersOptions): AsHandlerBundle {
   const codeStore = new AuthorizationCodeStore();
   const clientRegistry = new ClientRegistry({ allowInsecureHttp: options.cimdAllowInsecureHttp });
   const cimdResolver = new CimdResolver({
@@ -383,8 +415,10 @@ export function createAsHandlers(options: {
     allowlistHostnames: options.cimdAllowlistHostnames,
   });
   const deps: AsHandlerDeps = {
+    mode: options.mode,
     asConfig: options.asConfig,
-    tokenIssuer,
+    validator: options.validator,
+    localIssuer: options.localIssuer,
     codeStore,
     clientRegistry,
     cimdResolver,
@@ -395,10 +429,6 @@ export function createAsHandlers(options: {
     ...deps,
     handle: (req, res, url) => handleAsRequest(req, res, url, deps),
   };
-}
-
-function stripTrailingSlash(s: string): string {
-  return s.endsWith("/") ? s.slice(0, -1) : s;
 }
 
 // Public re-exports used by tests / oauth-demo script.
