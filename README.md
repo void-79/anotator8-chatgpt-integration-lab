@@ -1,120 +1,56 @@
-# Anotator8 × ChatGPT MCP Integration Lab
+# Anotator8 x ChatGPT Integration Lab
 
-An MCP server that exposes Anotator8 project data as read-only tools for AI assistants, built as an external integration (no changes to Anotator8 itself).
+External, read-only ChatGPT Apps SDK/MCP integration lab for Anotator8 project review. This repo is intentionally separate from `void-79/Anotator8`; it does not edit or import Anotator8 runtime code.
 
-## Quick Start
+## What It Does
 
-```bash
-# 1. Install dependencies
+- Starts a Streamable HTTP MCP server at `/mcp`.
+- Registers eight read-only Anotator8 review tools.
+- Registers a minimal ChatGPT widget resource for project summary and warnings.
+- Normalizes Anotator8 `.anatator.json` project payloads through an adapter boundary.
+- Preserves unknown top-level project fields.
+- Includes fixtures, unit/integration/contract tests, smoke protocol test, security notes, and porting docs.
+
+## Run
+
+```powershell
 npm install
-
-# 2. Configure environment (optional — server works with defaults)
-cp .env.example .env
-# Edit .env — set MCP_AUTH_TOKEN for production, or leave empty for local dev.
-
-# 3. Start the server
-npm run dev
-# → http://127.0.0.1:8787
-
-# 4. Run smoke test
-npm run smoke
-# → 6/6 checks pass
-
-# 5. Run tests (unit + integration + contract)
+npm run build
 npm test
-# → 105/105 pass
+npm run smoke
+npm run dev
 ```
 
-## Architecture
+Local endpoint:
 
+```text
+http://127.0.0.1:8787/mcp
 ```
-src/
-  shared/
-    types.ts              # All TypeScript types (UDM → Normalized)
-  server/
-    anotator8-adapter.ts  # Core: load, validate, normalize Anotator8 data
-    index.ts              # MCP server with 7 read-only tools
-  scripts/
-    smoke.ts              # 6-step smoke test
-tests/
-  unit/
-    adapter.test.ts        # 17 test cases
-  integration/
-    tools.test.ts          # Tool contract tests
-fixtures/
-  sample-project.anatator8.json  # Demo project (5 annotations)
-```
+
+For remote ChatGPT Developer Mode, expose the endpoint over HTTPS and configure `MCP_AUTH_TOKEN`.
 
 ## Tools
 
-| Tool | Description |
-|------|-------------|
-| `list_capabilities` | Show server capabilities, supported annotation types, subtitle languages |
-| `inspect_project` | High-level overview: metadata, counts, video info, warnings |
-| `validate_project` | Check project data consistency and structural validity |
-| `summarize_annotations` | Generate annotation statistics grouped by type/shape |
-| `find_annotations` | Search and filter annotations by type, shape, time range, text |
-| `create_review_plan` | Generate a structured manual review checklist |
-| `export_chatgpt_report` | Create a portable summary report for use in ChatGPT |
+| Tool | Purpose | Read/write |
+| --- | --- | --- |
+| `list_capabilities` | Show features, limitations, supported fixtures | read |
+| `inspect_project` | Normalize source, annotation, subtitle, timeline, warning summary | read |
+| `validate_project` | Validate ids, time ranges, subtitle references, source metadata | read |
+| `summarize_annotations` | Count actual annotations by type/shape/label/timing | read |
+| `find_annotations` | Filter actual annotations by type, label/text, confidence, time | read |
+| `suggest_labels` | Identify label review tasks without inventing labels | read |
+| `create_review_plan` | Produce manual review checklist | read |
+| `export_chatgpt_report` | Return Markdown/JSON report; does not write files | read |
 
-All tools are **read-only** — they never modify project data.
+## Fixture
 
-## ChatGPT Developer Mode Setup
+`fixtures/sample-project.anotator8.json` is synthetic but based on Anotator8 24.0.0 project file evidence (`version`, `videoSource`, `subtitleTracks`, `subtitleCues`, `nodes`). It intentionally includes one orphan subtitle cue warning and one unknown future field.
 
-1. **Upgrade** to ChatGPT Plus or Pro
-2. **Deploy** this server with HTTPS (Cloudflare Tunnel, ngrok, or a VPS)
-3. **Update** `.env` with your public URL
-4. In ChatGPT, go to **Settings → Developer** → Add MCP Server
-5. Enter your server URL (e.g. `https://your-server.example.com`)
+## Docs
 
-> **Note:** ChatGPT may still show a confirmation prompt for any tool call, even with `readOnlyHint: true`. This is expected per the current ChatGPT Developer Mode behavior.
-
-## Project Data Format
-
-The server is **read-only with zero filesystem access** — Anotator8 project JSON is passed
-**in tool arguments**, not loaded from disk. The shape is `ProjectFilePayload` (see
-`src/shared/types.ts`):
-
-```typescript
-{
-  version: string;          // e.g. "24.0.0"
-  videoUrl?: string;
-  videoSource?: { kind: "local-file" | "direct-url" | "youtube" | "demo"; ... };
-  locale?: "en" | "ru" | "kk";
-  classroomId?: string;
-  classroomName?: string;
-  subtitleTracks?: SubtitleTrack[];
-  subtitleCues?: SubtitleCue[];
-  nodes: UDMNode[];         // annotations + shapes
-}
-```
-
-A complete sample is at `fixtures/sample-project.anotator8.json` (5 annotations, 2 subtitle
-tracks, 3 cues, plus a `loroState` future-field to prove unknown-field preservation).
-
-## Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `MCP_HOST` | No | `127.0.0.1` | Host to bind the server to |
-| `MCP_PORT` | No | `8787` | Port to listen on |
-| `MCP_AUTH_TOKEN` | No | — | Bearer token for API authentication |
-| `CORS_ORIGIN` | No | `*` | Allowed CORS origin |
-
-## Development
-
-```bash
-npm install        # Install dependencies
-npm run dev        # Watch mode with tsx (auto-reload on changes)
-npm run build      # Compile TypeScript to dist/
-npm run start      # Run production build
-npm test           # Unit + integration tests (vitest)
-npm run smoke      # Smoke test (6 checks)
-```
-
-## Key Design Decisions
-
-- **Adapter-first**: All Anotator8-specific logic lives in `anotator8-adapter.ts`, keeping the MCP server generic
-- **Graceful degradation**: Invalid nodes in project files are skipped with warnings rather than failing the whole load
-- **Normalized output**: Adapter always returns `Normalized*` types — MCP server never touches raw UDMNode shapes
-- **Zero mutations**: Every tool is read-only; the server never writes back to project files
+- [Architecture](docs/ARCHITECTURE.md)
+- [Security](docs/SECURITY.md)
+- [ChatGPT App Setup](docs/CHATGPT_APP_SETUP.md)
+- [Tool Contracts](docs/TOOL_CONTRACTS.md)
+- [Porting to Anotator8](docs/PORTING_TO_ANOTATOR8.md)
+- [QA Report](docs/QA_REPORT.md)

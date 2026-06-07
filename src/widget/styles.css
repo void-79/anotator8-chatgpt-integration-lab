@@ -1,87 +1,105 @@
-/* Anotator8 ChatGPT Widget Styles */
-
-#anotator8-root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+.review-widget {
+  color: #172026;
+  font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   padding: 16px;
-  color: #333;
 }
 
-#anotator8-root *,
-#anotator8-root *::before,
-#anotator8-root *::after {
-  box-sizing: border-box;
+header {
+  border-bottom: 1px solid #d5dce1;
+  padding-bottom: 12px;
 }
 
-.header {
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-}
-
-.header h2 {
+.eyebrow {
+  color: #5b6b75;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
   margin: 0 0 4px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #111;
+  text-transform: uppercase;
 }
 
-.status {
+h1,
+h2 {
+  letter-spacing: 0;
   margin: 0;
-  color: #666;
-  font-size: 13px;
 }
 
-.stats {
-  margin-top: 12px;
+h1 {
+  font-size: 22px;
 }
 
-.stats-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 13px;
+h2 {
+  font-size: 15px;
+  margin: 16px 0 8px;
 }
 
-.stats-item:last-child {
-  border-bottom: none;
+#status {
+  color: #5b6b75;
+  margin: 6px 0 0;
 }
 
-.stats-key {
-  color: #555;
+.metrics {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 14px;
 }
 
-.stats-val {
-  font-weight: 500;
-  color: #222;
-}
-
-.warnings {
-  margin-top: 16px;
-}
-
-.warning {
-  padding: 8px 10px;
-  margin: 4px 0;
+.metrics div {
+  border: 1px solid #d5dce1;
   border-radius: 6px;
-  font-size: 13px;
-  line-height: 1.4;
+  padding: 10px;
 }
 
-.warning.error {
-  background: #fee2e2;
-  color: #991b1b;
-  border-left: 3px solid #dc2626;
+.metrics span {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
 }
 
-.warning.warning {
-  background: #fef9c3;
-  color: #854d0e;
-  border-left: 3px solid #ca8a04;
+.metrics small {
+  color: #5b6b75;
 }
 
-.warning.info {
-  background: #dbeafe;
-  color: #1e40af;
-  border-left: 3px solid #3b82f6;
+ul {
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  border-left: 3px solid #7a8790;
+  list-style: none;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+}
+
+li.error {
+  border-color: #b42318;
+}
+
+li.warning {
+  border-color: #b7791f;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  background: #1f6f8b;
+  border: 0;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 8px 10px;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }

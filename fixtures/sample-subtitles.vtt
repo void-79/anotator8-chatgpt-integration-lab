@@ -1,17 +1,7 @@
 WEBVTT
-Kind: captions
-Language: en
-Note: Sample WebVTT for the Anotator8 × ChatGPT Integration Lab.
-      Real Anotator8 exports subtitles as SubtitleCue[].startTime/endTime
-      (seconds) and renders them via its own player. The lab keeps VTT
-      as a portable cross-check fixture: counts and timings must line up
-      with the .anatator.json subtitleCues array.
 
-00:00:00.000 --> 00:00:03.500
-Welcome to the Anotator8 demo project.
+00:00:00.000 --> 00:00:03.200
+Opening context for the demonstration.
 
-00:00:05.200 --> 00:00:08.000
-This video demonstrates annotation features.
-
-00:00:15.000 --> 00:00:20.500
-Important concept highlighted here.
+00:00:09.000 --> 00:00:12.000
+This subtitle mirrors the intentional orphan cue in the JSON fixture.

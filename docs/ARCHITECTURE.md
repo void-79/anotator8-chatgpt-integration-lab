@@ -1,224 +1,62 @@
-# Anotator8 × ChatGPT Integration Lab - Architecture
+# Architecture
 
-## Overview
+## Environment
 
-This integration lab provides a **read-only MCP server** that enables ChatGPT to analyze and review Anotator8 video annotation projects. It is designed as an **external laboratory** that can be tested independently before porting into Anotator8.
+| Field | Value |
+| --- | --- |
+| OS / shell | Windows / PowerShell |
+| Workspace path | `C:\Users\void7\.codex\worktrees\66c8\anotator8-chatgpt-integration-lab` |
+| Anotator8 repo path | `C:\Anotator8` |
+| Current lab branch | detached `HEAD` |
+| Git clean | Lab: NO after implementation; Anotator8: NO before/without edits |
+| Node available | YES, `v24.13.0` |
+| Python available | YES, `Python 3.11.15` and `py` reports `3.14.0` |
+| Internet available | YES, official docs and npm package install succeeded |
+| Browser available | UNCLEAR, not needed for smoke |
+| Can run MCP Inspector | YES, `npx -y @modelcontextprotocol/inspector@latest --help` succeeded |
+| Can expose tunnel / ChatGPT Developer Mode | UNCLEAR, no tunnel or ChatGPT account state verified |
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        ChatGPT                               │
-│  (User prompts → Model decides → Calls MCP tools)           │
-└─────────────────┬───────────────────────────────────────────┘
-                  │ HTTPS / Secure MCP Tunnel
-                  ▼
-┌─────────────────────────────────────────────────────────────┐
-│         Anotator8 ChatGPT Integration Lab                   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              MCP Server (@modelcontextprotocol/sdk)   │   │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │   │
-│  │  │ inspect │ │validate │ │summarize│ │  find   │   │   │
-│  │  │_project │ │_project │ │_annotations│ │_annotations│ │   │
-│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘   │   │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐              │   │
-│  │  │ list_   │ │ create_ │ │ export_ │              │   │
-│  │  │capabilities│ │review_plan│ │chatgpt_report│              │   │
-│  │  └─────────┘ └─────────┘ └─────────┘              │   │
-│  └──────────────────────┬──────────────────────────────┘   │
-│                         │                                    │
-│  ┌──────────────────────▼──────────────────────────────┐   │
-│  │           Anotator8 Adapter Layer                   │   │
-│  │  - Parse raw .anatator.json                         │   │
-│  │  - Normalize to integration model                   │   │
-│  │  - Validate consistency                            │   │
-│  │  - Preserve unknown fields                         │   │
-│  └──────────────────────┬──────────────────────────────┘   │
-│                         │                                    │
-│  ┌──────────────────────▼──────────────────────────────┐   │
-│  │              Fixtures / Test Data                    │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
+## Evidence Classification
 
-## Components
+| Label | Meaning in this lab |
+| --- | --- |
+| REPO_EVIDENCE | Read-only inspection of `C:\Anotator8` files/tests/runtime commands |
+| PROTOTYPE_EVIDENCE | Read-only inspection of `C:\chat-gpt-mcp-app` |
+| OFFICIAL_DOC_EVIDENCE | OpenAI Apps SDK and MCP protocol docs |
+| RUNTIME_EVIDENCE | Build, tests, smoke, MCP Inspector availability |
+| INFERENCE | Design conclusion based on evidence |
+| UNCLEAR | Not proven |
 
-### 1. MCP Server (`src/server/index.ts`)
+## Anotator8 Product Surface Map
 
-Built using `@modelcontextprotocol/sdk` and `@modelcontextprotocol/ext-apps` for ChatGPT Apps compatibility.
+| Surface | User-visible capability | Source files | Data model | Runtime/test evidence | Integration relevance |
+| --- | --- | --- | --- | --- | --- |
+| Project save/open | Portable `.anatator.json`; ZIP `.anatator` also referenced | `src/application/services/projectFile.ts`, `src/presentation/components/ProjectFileActions.tsx` | `ProjectFilePayload` with `version`, `videoUrl`, `videoSource`, `locale`, `subtitleTracks`, `subtitleCues`, `nodes` | `src/tests/application/projectFile.test.ts`, `src/tests/e2e/ProductReady.project-io.spec.ts` | Adapter parses this exact payload and preserves unknown fields |
+| Annotation model | Box, ellipse, arrow are shipped; broader annotation type enum exists | `src/domain/entities/UDMNode.ts`, `src/domain/entities/AnnotationFactory.ts` | UDM node with `spatial`, `temporal`, `visual`, `extensions.visual` | `src/tests/domain/AnnotationFactory.test.ts`, canvas/tool tests | Normalized annotations are derived from UDM nodes only |
+| Canvas/object model | Visual annotation drawing and hit testing | `src/presentation/components/Canvas/*`, `CanvasUtils.ts` | Normalized spatial floats and visual data | `CanvasRenderer.test.tsx`, `canvasHitTest.test.ts` | ChatGPT widget is review-only, not a canvas editor |
+| Video source model | Direct URL, YouTube, demo, local file; export blocked for YouTube/browser limits | `src/application/videoSources.ts`, `videoUrlStorage.ts` | `VideoSource` union; local file object URLs are not portable | `src/tests/application/videoSources.test.ts`, `VideoUrlBinding.spec.ts` | Server reports metadata only; no video bytes |
+| Subtitles / timed text | Tracks, cues, SRT/VTT import/export | `src/application/stores/subtitleStore.ts`, `src/application/subtitles/subtitleFormats.ts` | `SubtitleTrack`, `SubtitleCue` with locale text and style | `subtitleFormats.test.ts`, `ProjectSubtitlePanel.test.tsx` | Validator checks cue ranges and orphaned cues |
+| Timeline | Studio Beta timing editor | `src/presentation/components/StudioTimeline/*`, `timelineUtils.ts` | Annotation clips from node temporal ranges; explicit track nodes possible | `Timeline.test.tsx`, `StudioSmoke.spec.ts` | Lab creates normalized implicit timeline when no track nodes exist |
+| Export/import | Project JSON/ZIP, annotation CSV, gated video MP4 | `src/domain/export/shipped.ts`, `src/application/services/projectArchive.ts` | JSON nodes, CSV annotation rows | exporter and project archive tests | Report export is ChatGPT-only and does not mutate Anotator8 |
+| AI / connector remnants | Experimental plugins and proxy stub, no product ChatGPT app found | `src/experimental/plugins/*`, `backend_py/app/routers/plugin_proxy.py` | Plugin allowlist/proxy model | plugin registry tests | Do not conflate plugin sandbox with ChatGPT app |
 
-**Responsibilities:**
-- Register all MCP tools with Zod schemas
-- Handle tool invocation requests
-- Return structured responses (`structuredContent`, `content`, `_meta`)
-- Register widget resource for ChatGPT UI
+## Architecture Layers
 
-**Tool Registry:**
-| Tool | Purpose | Read/Write |
-|------|---------|------------|
-| `list_capabilities` | Show available features | Read |
-| `inspect_project` | Analyze project structure | Read |
-| `validate_project` | Check data consistency | Read |
-| `summarize_annotations` | Generate annotation stats | Read |
-| `find_annotations` | Search/filter annotations | Read |
-| `create_review_plan` | Generate review checklist | Read |
-| `export_chatgpt_report` | Create portable report | Read |
+| Module | Responsibility |
+| --- | --- |
+| `src/server/app.ts` | Create MCP server, register app tools/resource/prompt, serve Streamable HTTP |
+| `src/server/anotator8-adapter.ts` | Parse raw project data, normalize domain model, validate known fields, preserve unknowns |
+| `src/server/schemas.ts` | Zod input/output schemas for every tool |
+| `src/server/tools/*` | Typed read-only tool handlers |
+| `src/server/resources/widget-resource.ts` | Register ChatGPT widget resource and CSP |
+| `src/widget/*` | Minimal review/control panel |
+| `fixtures/*` | Synthetic Anotator8-like project and VTT |
+| `tests/*` | Unit, integration, and contract verification |
 
-### 2. Anotator8 Adapter (`src/server/anotator8-adapter.ts`)
+## Widget Scope
 
-**Responsibilities:**
-- Parse raw Anotator8 project JSON
-- Normalize to stable integration model
-- Validate data consistency
-- Compute statistics
-- Preserve unknown fields
-
-**Key Types:**
-```typescript
-interface NormalizedProject {
-  version: string;
-  source: NormalizedVideoSource;
-  annotations: NormalizedAnnotation[];
-  subtitleTracks: NormalizedSubtitleTrack[];
-  timelineTracks: NormalizedTimelineTrack[];
-  metadata: { locale?, classroomId?, classroomName? };
-  unknownFields: Record<string, unknown>;
-  warnings: IntegrationWarning[];
-  stats: Statistics;
-}
-```
-
-### 3. Shared Types (`src/shared/types.ts`)
-
-TypeScript type definitions for:
-- Anotator8 domain types (UDMNode, VideoSource, etc.)
-- Integration model types
-- Tool result types
-
-### 4. Fixtures (`fixtures/`)
-
-Sample Anotator8 project data for testing:
-- `sample-project.anatator8.json` - Full demo project with annotations, subtitles
-
-## Data Flow
-
-### Tool Invocation Flow
-
-```
-1. User: "Analyze my Anotator8 project"
-        ↓
-2. ChatGPT Model receives prompt
-        ↓
-3. Model decides to call inspect_project tool
-        ↓
-4. MCP request → MCP Server
-        ↓
-5. Server passes project data to Adapter
-        ↓
-6. Adapter.normalizes() → NormalizedProject
-        ↓
-7. Server builds structuredContent response
-        ↓
-8. MCP response → ChatGPT
-        ↓
-9. Model narrates results to user
-```
-
-### Adapter Normalization Flow
-
-```
-Raw .anatator.json
-    ↓
-Parse payload (validate structure)
-    ↓
-Normalize video source
-    ↓
-Normalize annotations (UDMNode → NormalizedAnnotation)
-    ↓
-Normalize subtitle tracks
-    ↓
-Build timeline tracks
-    ↓
-Compute statistics
-    ↓
-NormalizeProject (stable output)
-```
-
-## Security Model
-
-**Read-only by design:**
-- No file system access
-- No project mutation
-- No arbitrary command execution
-- Project data passed directly in tool arguments
-
-**Input validation:**
-- Zod schema validation on all inputs
-- Adapter validates data consistency
-- Warnings generated for non-critical issues
-- Errors generated for critical issues
-
-## Widget Integration
-
-The MCP server registers a ChatGPT widget resource (`ui://widget/anotator8-widget.html`) that can display:
-- Project summary stats
-- Warnings and errors
-- Review status
-
-The widget receives tool results via the MCP Apps bridge (`ui/notifications/tool-result`).
-
-## Testing Strategy
-
-### Unit Tests (`tests/unit/`)
-- Adapter normalization
-- Schema validation
-- Edge cases
-
-### Integration Tests (`tests/integration/`)
-- Full tool invocations
-- End-to-end flows
-
-### Smoke Test (`npm run smoke`)
-- Server starts correctly
-- Fixture loads
-- Basic operations work
-
-## Future Extension Points
-
-1. **Write Tools** (when ready):
-   - `propose_annotation_changes` - Return patch proposals
-   - `apply_annotation_patch` - Apply approved patches
-
-2. **Widget Enhancements**:
-   - Interactive annotation browser
-   - Visual timeline editor
-
-3. **Anotator8 Porting**:
-   - Move adapter to shared package
-   - Integrate MCP server into Anotator8 backend
-   - Expose project data via internal API
-
-## Dependencies
-
-```json
-{
-  "@modelcontextprotocol/sdk": "^1.29.0",
-  "@modelcontextprotocol/ext-apps": "^1.7.4",
-  "express": "^4.19.0",
-  "zod": "^3.23.8"
-}
-```
-
-## Configuration
-
-Environment variables (`.env`):
-```bash
-# See .env.example for the full list. Key vars:
-MCP_HOST=127.0.0.1
-MCP_PORT=8787
-MCP_AUTH_TOKEN=                 # leave empty in dev; set random 32-byte hex in prod
-RATE_LIMIT_MAX=100
-RATE_LIMIT_WINDOW_MS=60000
-CORS_ORIGIN=*
-```
-
-The server **does not** read any `ANOTATOR8_*_PATH` env var — project JSON is passed in tool
-arguments. This is by design (no filesystem access).
+| UI element | Purpose | Backed by tool/data | Not pretending to do |
+| --- | --- | --- | --- |
+| Metrics row | Show latest annotation/subtitle/warning counts | `structuredContent.stats` from tools | Not a live editor |
+| Warnings list | Show latest structured warnings | `structuredContent.warnings` | Not validation beyond server output |
+| Focus buttons | Call `create_review_plan` only when `window.openai.callTool` and hidden `_meta.projectData` are present | Apps SDK bridge feature-detected | Not shown when unsupported |
