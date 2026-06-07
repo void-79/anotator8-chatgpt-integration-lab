@@ -1,0 +1,145 @@
+threat_record:
+  object_id: threat-record-v0.5.0
+  object_type: THREAT_RECORD
+  title: Threat Model — 10 рисков lab v0.4.0
+  generated_at: 2026-06-07
+  purpose: >
+    Каталог угроз с mitigation, residual risk, evidence, safe_step.
+    Обновлённая версия 10-row таблицы из docs/SECURITY.md § Controls.
+  rows:
+    - id: T-01
+      threat: Demo bearer auth is weaker than OAuth 2.1
+      category: AUTH
+      severity: HIGH
+      mitigation: >
+        MCP_AUTH_TOKEN optional; if unset, 7-line DEMO-ONLY banner. If set,
+        RFC 6750 with 401/403 + WWW-Authenticate + RFC 9728 §5.1
+        resource_metadata. v0.3.0 foundation.
+      residual: >
+        Static allowlist cannot rotate, cannot scope per-tool, cannot
+        delegate identity. Production needs OAuth 2.1 AS.
+      evidence: src/server/index.ts:65-76, src/server/auth.ts, src/server/oauth/
+      safe_step: discovery-lead/oauth-2.1-as-ref-impl
+      tests: tests/integration/auth-bypass.test.ts, tests/integration/oauth/protected-resource.test.ts
+    - id: T-02
+      threat: Project JSON can contain sensitive education records
+      category: PRIVACY
+      severity: HIGH
+      mitigation: >
+        Read-only, no persistence. isEducationRecord, dataResidency,
+        ownerId, classroomId preserved as opaque (not interpreted).
+      residual: >
+        Widget receives _meta.projectData (hidden); LLM sees projectData
+        in tool arguments. User must decide whether to share with ChatGPT.
+      evidence: src/server/anotator8-adapter.ts:17-27, src/widget/widget.ts:38
+      safe_step: redact _meta.projectData in production; redact sensitive
+        fields before passing to ChatGPT
+      tests: tests/unit/adapter.test.ts
+    - id: T-03
+      threat: Widget receives hidden _meta.projectData
+      category: PRIVACY + WIDGET
+      severity: MEDIUM
+      mitigation: >
+        CSP with no external connectDomains / resourceDomains.
+        textContent only (no innerHTML). bridge-info span shows
+        which bridge is active.
+      residual: >
+        _meta.projectData is in widget memory; LLM can read it via
+        structuredContent echo.
+      evidence: src/server/resources/widget-resource.ts, src/widget/widget.ts
+      safe_step: remove or redact _meta.projectData before production
+      tests: tests/contract/widget-bridge.test.ts
+    - id: T-04
+      threat: OAuth well-known endpoint unauthenticated by design (RFC 9728 §3.1)
+      category: AUTH
+      severity: LOW
+      mitigation: >
+        Returns only public metadata. CORS * is appropriate for
+        public discovery. No tokens, no PII.
+      residual: >
+        If AS list is sensitive, deployment must use private AS.
+      evidence: src/server/oauth/protected-resource-metadata.ts
+      safe_step: document in deployment guide
+      tests: tests/unit/oauth/protected-resource-metadata.test.ts
+    - id: T-05
+      threat: Dependency vulnerabilities from npm audit
+      category: SUPPLY_CHAIN
+      severity: LOW (1 devDep critical; 0 production)
+      mitigation: >
+        vitest 2 → 3 upgrade closes 4 of 5. Production deps
+        (@modelcontextprotocol/sdk, ext-apps, zod) have 0 known.
+        Documented in DEPENDENCY_AUDIT.md.
+      residual: >
+        1 critical remains in devDep vitest <4.1.0 (UI server RCE).
+        Lab never starts vitest --ui.
+      evidence: docs/DEPENDENCY_AUDIT.md
+      safe_step: discovery-lead/vitest-4-rolldown-windows (re-attempt quarterly)
+      tests: CI npm audit --omit=dev
+    - id: T-06
+      threat: MCP SDK 1.29.0 + ext-apps 1.7.4 recursion bug
+      category: SDK_UPSTREAM
+      severity: LOW (non-fatal)
+      mitigation: >
+        process.on('unhandledRejection', captureUnhandledRejection)
+        in app.ts captures the RangeError to audit log. Tests pass
+        cleanly.
+      residual: >
+        Upstream bug stays; workaround stays; test output stays clean
+        but audit log shows recursion entries.
+      evidence: src/server/app.ts:22-41, tests/unit/rejection-capture.test.ts
+      safe_step: discovery-lead/mcp-sdk-1.30 (track upstream fix)
+    - id: T-07
+      threat: Video bytes
+      category: DATA_EXPOSURE
+      severity: N/A
+      mitigation: >
+        Never read, never uploaded, never decoded. Adapter reports
+        only videoSource metadata.
+      residual: none
+      evidence: src/server/anotator8-adapter.ts § VideoSource handling
+      safe_step: N/A
+    - id: T-08
+      threat: Local filesystem arbitrary read
+      category: DATA_EXPOSURE
+      severity: N/A
+      mitigation: >
+        storage.ts reads only allowlisted fixtures. widget-resource.ts
+        reads only src/widget/*. Verified by ripgrep.
+      residual: none
+      evidence: src/server/storage.ts, src/server/resources/widget-resource.ts
+      safe_step: keep allowlist tight; do not add tools that read arbitrary paths
+    - id: T-09
+      threat: Shell exec / arbitrary command execution
+      category: RCE
+      severity: N/A
+      mitigation: >
+        Zero child_process / exec / spawn in src/server/**. New
+        validators (v0.5.0) also avoid these.
+      residual: none
+      evidence: ripgrep 2026-06-07
+      safe_step: maintain this invariant in CI (regex check)
+    - id: T-10
+      threat: Public tunnel without MCP_AUTH_TOKEN
+      category: AUTH + FOOTGUN
+      severity: HIGH (if exploited)
+      mitigation: >
+        7-line DEMO-ONLY banner at startup. docs/CHATGPT_APP_SETUP.md
+        has tunnel setup section.
+      residual: >
+        If maintainer ignores banner, server is open. Tools are
+        read-only so worst case is data exposure of caller-supplied
+        projectData — same as HTTP demo without token.
+      evidence: src/server/index.ts:65-76, docs/CHATGPT_APP_SETUP.md
+      safe_step: add startup precondition check (refuse to start on
+        public host without token)
+  invariant_tests:
+    - id: T-INV-01
+      rule: Zero child_process / exec / spawn in src/server/**
+      enforcement: scripts/validate-canonical.ts could add a regex check (deferred)
+    - id: T-INV-02
+      rule: "All 8 tools declared readOnlyHint: true"
+      enforcement: tests/contract/mcp-tool-contracts.test.ts
+  threat_posture_summary: >
+    Auth: needs OAuth 2.1 AS (T-01). Privacy: needs DPIA + redaction
+    (T-02, T-03). Footgun: tunnel without token (T-10). SDK/supply
+    chain: tracked (T-05, T-06). Shell/FS/video: locked (T-07, T-08, T-09).

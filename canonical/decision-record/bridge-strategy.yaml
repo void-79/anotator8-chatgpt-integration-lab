@@ -1,0 +1,96 @@
+decision_record:
+  object_id: decision-bridge-strategy
+  object_type: DECISION_RECORD
+  title: Widget Bridge Strategy — Apps SDK host bridge primary + legacy fallback
+  generated_at: 2026-06-07
+  source_of_truth: src/widget/widget.ts, tests/contract/widget-bridge.test.ts
+  status: ACCEPTED + IMPLEMENTED + VERIFIED_FOR_PROTOCOL_ONLY
+  decision_summary: >
+    Widget использует MCP Apps host bridge (JSON-RPC over postMessage,
+    protocolVersion 2026-01-26) как primary path. Если host не
+    поддерживает bridge, fallback на legacy window.openai.callTool
+    (Apps SDK 1.x). Bridge-info span показывает какой bridge активен.
+    Если оба отсутствуют — focus buttons скрыты (no fake UI).
+  context:
+    problem: >
+      ChatGPT iframe widget должен вызывать create_review_plan и другие
+      tools. Два возможных механизма: новый Apps host bridge (2026-01-26)
+      или legacy window.openai.callTool. Нужно поддержать оба для
+      backwards compat + forward compat.
+    alternatives_considered:
+      - alt: только legacy window.openai
+        rejected: ChatGPT может drop legacy support в будущем
+      - alt: только новый Apps host bridge
+        rejected: backward compat с Apps SDK 1.x
+      - alt: ни одного bridge, использовать window.parent direct
+        rejected: небезопасно, нестандартно
+  chosen_solution: Primary + fallback с bridge detection
+  evidence:
+    repo_evidence: src/widget/widget.ts
+    runtime_evidence: tests/contract/widget-bridge.test.ts
+    official_doc_evidence:
+      - OFF-APPS-SDK-QUICKSTART (bridge protocol 2026-01-26)
+      - OFF-APPS-SDK-REFERENCE (legacy window.openai)
+    inference: bridge-info span + hasUsableBridge() guard
+  evidence_status: CONFIRMED_FOR_PLATFORM + APPS_SDK_BRIDGE_LOCAL_ONLY
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY
+  release_readiness: app_review_ready
+  decision_owner: lab maintainer
+  decision_date: 2026-06-07 (reaffirmed at v0.4.0)
+  review_due: on next Apps SDK release
+  re_evaluate_when:
+    - Apps SDK ships a newer bridge protocol version
+    - ChatGPT drops legacy window.openai support
+    - New MCP Apps host bridge feature requires widget changes
+  impact:
+    what_changes:
+      - src/widget/widget.ts (BRIDGE_PROTOCOL_VERSION constant + RPC code)
+      - src/server/app.ts (registerAppTool with _meta.ui.resourceUri)
+      - tests/contract/widget-bridge.test.ts
+    what_does_not_change:
+      - src/server/tools/* (tools unchanged)
+      - transport (Streamable HTTP / stdio)
+      - CORS allowlist
+  decision_refs:
+    upstream: OFF-APPS-SDK-QUICKSTART
+    related_decisions: [decision-cors-allowlist, decision-no-write-tool-policy]
+  ceiling: APPS_SDK_BRIDGE_LOCAL_ONLY
+  ceiling_explanation: >
+    Bridge detection in widget runs entirely on the client. The
+    primary handshake is verified by tests/contract/widget-bridge.test.ts
+    (source-level check). Real ChatGPT host behavior is not verified
+    on this host (GAP G-02).
+  known:
+    - BRIDGE_PROTOCOL_VERSION = "2026-01-26"
+    - RPC uses postMessage to window.parent (no origin filter)
+    - rpcNotify + rpcRequest pattern
+    - Bridge 2 detection: typeof window.openai.callTool === 'function'
+    - focus-panel.hidden = !hasUsableBridge() || !lastProjectData
+  unknown:
+    - Real ChatGPT e2e verification (GAP G-02)
+    - Apps SDK post-2026-01-26 compatibility (GAP G-14)
+  not_proven:
+    - That all ChatGPT client versions speak 2026-01-26
+    - That legacy fallback is still accepted by ChatGPT
+  assumptions:
+    - BRIDGE_PROTOCOL_VERSION stays 2026-01-26 until next bump
+    - ChatGPT does not silently change postMessage shape
+  contradictions: none
+  allowed_next_steps:
+    - Add origin filter to postMessage (post UU-07)
+    - Promote to Apps SDK 2026-XX version when released
+    - Add post-bridge handshake ping/pong
+  forbidden_shortcuts:
+    - Claiming bridge is e2e verified (it is not, GAP G-02)
+    - Removing legacy fallback without Apps SDK version confirmation
+    - Sending arbitrary postMessage to window.parent without origin check
+  related_sources:
+    - src/widget/widget.ts
+    - tests/contract/widget-bridge.test.ts
+    - docs/CHATGPT_APP_SETUP.md § Widget Bridge
+    - canonical/official-doc-record.yaml OFF-APPS-SDK-QUICKSTART
+  related_gaps: [G-02, G-14, UU-07]
+  related_truth_passport: truth-passport/decision-bridge-strategy.yaml
+  related_analogs:
+    - legacy window.postMessage + structured handshake (similar pattern)
+  last_reviewed: 2026-06-07

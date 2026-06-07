@@ -1,0 +1,67 @@
+truth_passport:
+  object_id: decision-no-write-tool-policy
+  object_type: TRUTH_PASSPORT
+  title: truth passport for decision-no-write-tool-policy
+  generated_at: 2026-06-07
+  current_answer_ceiling: CONFIRMED_FOR_PLATFORM
+  ceiling_calculation: >
+    min(vehicle_specificity=APPS_SDK_PLATFORM_ONLY,
+        source_snapshot_state=LIVE,
+        evidence_strength=CONFIRMED_FOR_PLATFORM,
+        decision_status=ACCEPTED + IMPLEMENTED + INTENTIONALLY_RESTRICTIVE,
+        privacy_gate=N/A,
+        safety_gate=HIGH [no mutation by design],
+        test_maturity=EMULATOR_READY,
+        unresolved_gaps=0 [for this decision],
+        release_readiness=app_review_ready,
+        exact_artifact_quality=HIGH,
+        authorization_scope=read-only-mvp)
+  weakest_link: completeness (intentionally restrictive; future expansion blocked on G-01)
+  vehicle_scope: any Apps SDK client
+  capability_scope: 8 read-only tools
+  decision_refs:
+    - canonical/decision-record/no-write-tool-policy.yaml
+  safety_status: GO_SIM + GO_READ_ONLY (no mutation possible)
+  evidence_status: CONFIRMED_FOR_PLATFORM
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY + FIELD_READ_ONLY
+  release_readiness: app_review_ready
+  privacy_status: N/A (no data mutation)
+  source_snapshot_state: LIVE
+  confidence: HIGH
+  risk_level: LOW
+  completeness: 0.95
+  known:
+    - "All 8 tools declared readOnlyHint: true, destructiveHint: false, openWorldHint: false"
+    - "4 write tools explicitly listed as disabledFutureTools in capabilities.example.json"
+    - "No write tool can be added without modifying tools/index.ts"
+  unknown:
+    - "When (or if) write tools will be added"
+  not_proven:
+    - "That this policy is sufficient for any real production use case beyond demo / read-only review"
+  assumptions:
+    - "Lab's purpose is read-only review (not mutation)"
+    - "Mutation belongs in Anotator8 itself, not in ChatGPT"
+  contradicted_or_conflicting: []
+  allowed_next_steps:
+    - "Design reversible patch model (post G-01)"
+    - "Add propose_annotation_changes (post G-01)"
+    - "Add apply_annotation_patch with explicit user approval (post G-01)"
+  forbidden_shortcuts:
+    - "Adding any write tool without OAuth 2.1 AS"
+    - "Adding any write tool that mutates Anotator8 backend directly"
+    - "Bypassing explicit user approval for any mutation"
+  required_artifacts_to_upgrade:
+    - "To WRITER_READY: OAuth 2.1 AS + reversible patch model (G-01)"
+  related_sources:
+    - canonical/decision-record/no-write-tool-policy.yaml
+    - config/capabilities.example.json
+    - src/server/app.ts:75
+  related_gaps: [G-01, G-07]
+  related_analogs:
+    - GitHub MCP server (read-only first, write with explicit scope)
+    - Stripe MCP server
+  related_methods:
+    - read-only-by-default
+    - write-tools-deferred
+  last_reviewed: 2026-06-07
+  review_due: after OAuth 2.1 AS

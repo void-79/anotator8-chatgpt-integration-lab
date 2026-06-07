@@ -1,0 +1,61 @@
+truth_passport:
+  object_id: tool-validate-project
+  object_type: TRUTH_PASSPORT
+  title: truth passport for validate_project
+  generated_at: 2026-06-07
+  current_answer_ceiling: PARTIAL_EXACT_MARKET + RUNTIME_VERIFIED
+  ceiling_calculation: >
+    min(vehicle_specificity=PARTIAL_EXACT_MARKET,
+        source_snapshot_state=LIVE + CAPTURED_UNHASHED,
+        evidence_strength=CONFIRMED_FOR_PLATFORM,
+        decision_status=ACCEPTED,
+        privacy_gate=NEEDS_DPIA,
+        safety_gate=MEDIUM-HIGH,
+        test_maturity=EMULATOR_READY [unit + integration],
+        unresolved_gaps=G-04,
+        release_readiness=app_review_ready,
+        exact_artifact_quality=PARTIAL,
+        authorization_scope=read-only)
+  weakest_link: privacy_gate
+  vehicle_scope: Anotator8 v24.0.0
+  capability_scope: validate project, return valid/errors/warnings/checks
+  decision_refs:
+    - canonical/decision-record/no-write-tool-policy.yaml
+  safety_status: GO_SIM + GO_READ_ONLY
+  evidence_status: CONFIRMED_FOR_PLATFORM + PARTIAL_EXACT_MARKET
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY + FIELD_READ_ONLY
+  release_readiness: app_review_ready
+  privacy_status: NEEDS_DPIA
+  source_snapshot_state: LIVE + CAPTURED_UNHASHED
+  confidence: MEDIUM-HIGH
+  risk_level: MEDIUM
+  completeness: 0.75
+  known:
+    - "Validator emits warning for orphan subtitle cues"
+    - "Validator emits warning for unknown annotation types"
+    - "Validator emits warning for unknown shapes"
+    - "Validator emits warning for invalid time ranges"
+  unknown:
+    - "v25+ ruleset changes"
+  not_proven:
+    - "Validator is exhaustive for v24.0.0"
+  assumptions:
+    - "Fixture (sample-project) is typical Anotator8 project"
+  contradicted_or_conflicting: []
+  allowed_next_steps:
+    - "Add v25+ rules"
+    - "Add linter for known bad patterns"
+  forbidden_shortcuts:
+    - "Claiming validator is exhaustive"
+  required_artifacts_to_upgrade:
+    - "To GOLDEN: real Anotator8 export (G-04)"
+  related_sources:
+    - canonical/tool-record/validate-project.yaml
+    - src/server/tools/validate-project.ts
+  related_gaps: [G-04, G-16, UU-02]
+  related_analogs:
+    - jsonschema
+  related_methods:
+    - rule-based validation
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07

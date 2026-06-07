@@ -1,0 +1,58 @@
+truth_passport:
+  object_id: tool-list-capabilities
+  object_type: TRUTH_PASSPORT
+  title: truth passport for list_capabilities
+  generated_at: 2026-06-07
+  current_answer_ceiling: GENERIC_ARCHETYPE + CONFIRMED_FOR_PLATFORM
+  ceiling_calculation: >
+    min(vehicle_specificity=GENERIC_ARCHETYPE [no project-specific knowledge],
+        source_snapshot_state=LIVE [src/server/tools/list-capabilities.ts],
+        evidence_strength=CONFIRMED_FOR_PLATFORM [MCP tools spec],
+        decision_status=N/A [no architectural decision],
+        privacy_gate=PUBLIC [no PII, static config],
+        safety_gate=HIGH [no shell, no FS, no input],
+        test_maturity=EMULATOR_READY [contract test],
+        unresolved_gaps=0,
+        release_readiness=app_review_ready,
+        exact_artifact_quality=HIGH,
+        authorization_scope=read-only)
+  weakest_link: vehicle_specificity (GLOBAL, not project-specific)
+  vehicle_scope: N/A (static config)
+  capability_scope: static capability list
+  decision_refs: []
+  safety_status: GO_SIM + GO_READ_ONLY (safe in any context)
+  evidence_status: CONFIRMED_FOR_PLATFORM
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY + FIELD_READ_ONLY
+  release_readiness: app_review_ready
+  privacy_status: PUBLIC
+  source_snapshot_state: LIVE
+  confidence: HIGH
+  risk_level: LOW
+  completeness: 0.9
+  known:
+    - "Tool returns static config (features, limitations, annotation types, subtitle languages, fixture IDs)"
+    - "No input required; safe to call before fixture load"
+    - "Used by maintainer for MCP conformance verification"
+  unknown: []
+  not_proven:
+    - "That the feature list is sufficient for App Store capability disclosure"
+  assumptions:
+    - "Feature list is curated and stable"
+  contradicted_or_conflicting: []
+  allowed_next_steps:
+    - "Add discoverable version field"
+    - "Add OAuth 2.1 scope (post G-01)"
+  forbidden_shortcuts:
+    - "Claiming this tool alone proves lab is App Store ready"
+  required_artifacts_to_upgrade: []
+  related_sources:
+    - canonical/tool-record/list-capabilities.yaml
+    - src/server/tools/list-capabilities.ts
+    - config/capabilities.example.json
+  related_gaps: []
+  related_analogs:
+    - MCP server capabilities in initialize
+  related_methods:
+    - static-discovery
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07

@@ -1,0 +1,129 @@
+assurance_case_record:
+  object_id: assurance-case-record-v0.5.0
+  object_type: ASSURANCE_CASE_RECORD
+  title: Top-level Assurance Case — lab v0.4.0
+  generated_at: 2026-06-07
+  purpose: >
+    Top-level GSN-style assurance case для lab v0.4.0. Claims подкреплены
+    evidence, sub-cases, и explicit limitations. Использует GSN-подобную
+    структуру (Goal / Strategy / Solution / Context).
+  top_goal:
+    id: G-TOP
+    statement: >
+      Lab v0.4.0 is safe to use as a local / demo read-only MCP integration
+      for Anotator8 v24.0.0 projects, with explicit limits on what it is
+      NOT safe for.
+  context:
+    scope: >
+      Local development, MCP Inspector, ChatGPT Developer Mode (with tunnel),
+      local stdio clients (Claude Desktop, Cursor, Windsurf, Cline, OpenCode,
+      Aider, Continue, Copilot).
+    out_of_scope: >
+      Production deployment with student/customer data. Public App Store
+      submission. Multi-tenant hosting. Federated identity.
+  sub_goals:
+    - id: G-01-READONLY
+      statement: All 8 tools are read-only.
+      strategy: S-01-READONLY
+      solutions:
+        - id: SOL-01-READONLY
+          evidence: "src/server/app.ts:75 (all 8 tools declared readOnlyHint: true, destructiveHint: false, openWorldHint: false)"
+          tests: tests/contract/mcp-tool-contracts.test.ts
+        - id: SOL-02-WRITE-DISABLED
+          evidence: "config/capabilities.example.json:15-20 (disabledFutureTools: propose_annotation_changes, apply_annotation_patch, generate_subtitle_cleanup_patch, suggest_timeline_markers)"
+      context: >
+        "Read-only" is a hint, not a security control. A malicious caller
+        could still call 8 tools. The assurance is about the lab's
+        design intent + capability flags.
+    - id: G-02-NO-SHELL
+      statement: Lab cannot execute arbitrary shell commands.
+      strategy: S-02-NO-SHELL
+      solutions:
+        - id: SOL-03-NO-SHELL
+          evidence: >
+            ripgrep 2026-06-07: zero matches for child_process | exec | spawn
+            in src/server/**. Audit v1 § Section 15.
+        - id: SOL-04-NO-PROC-IN-VALIDATORS
+          evidence: >
+            v0.5.0 validators (scripts/validate-canonical.ts,
+            validate-truth-passports.ts) use pure Node + js-yaml + fs only.
+            No child_process / exec / spawn.
+      context: >
+        Even with read-only tools, shell exec could RCE. This invariant
+        must be maintained in CI (future: regex check).
+    - id: G-03-FS-ALLOWLIST
+      statement: Lab cannot read arbitrary local files.
+      strategy: S-03-FS-ALLOWLIST
+      solutions:
+        - id: SOL-05-FS-ALLOWLIST
+          evidence: >
+            src/server/storage.ts reads only allowlisted fixture paths.
+            src/server/resources/widget-resource.ts reads only src/widget/*.
+            No readFile in any other src/server/ file (ripgrep 2026-06-07).
+        - id: SOL-06-NO-WRITEFS
+          evidence: >
+            ripgrep shows no writeFile / appendFile / fs.writeFileSync in
+            src/server/**. Lab cannot mutate local files.
+      context: >
+        Allowlist is a defense-in-depth. The lab does not expose a
+        read_file tool at all (per PROTOTYPE_AUDIT decision: "ChatGPT
+        should receive normalized data, not arbitrary FS access").
+    - id: G-04-AUTH
+      statement: Authentication is enforced when MCP_AUTH_TOKEN is set.
+      strategy: S-04-AUTH
+      solutions:
+        - id: SOL-07-BEARER
+          evidence: src/server/auth.ts (RFC 6750 Bearer with WWW-Authenticate)
+        - id: SOL-08-PRM
+          evidence: src/server/oauth/protected-resource-metadata.ts (RFC 9728)
+        - id: SOL-09-401-403
+          evidence: tests/integration/auth-bypass.test.ts
+      limitations:
+        - Static allowlist (MCP_AUTH_TOKEN) cannot rotate, scope, delegate
+        - DEMO-ONLY mode (no token) = open server, intended only for localhost
+        - No OAuth 2.1 AS (G-01 gap)
+      context: >
+        Auth is OPTIONAL (DEMO-ONLY) by design for local dev. For public
+        exposure, MCP_AUTH_TOKEN MUST be set; OAuth 2.1 AS is recommended
+        for production. See GAP G-01, G-15.
+    - id: G-05-DATA-EXPOSURE
+      statement: Lab does not silently exfiltrate data.
+      strategy: S-05-DATA-EXPOSURE
+      solutions:
+        - id: SOL-10-NO-VIDEO
+          evidence: src/server/anotator8-adapter.ts (video bytes never read)
+        - id: SOL-11-NO-FS-ARB
+          evidence: T-08 mitigation
+        - id: SOL-12-AUDIT
+          evidence: src/server/audit.ts (stderr JSON lines, Bearer redaction, 500-char cap)
+      limitations:
+        - Audit log on stderr (no retention policy)
+        - projectData passed to LLM (caller must redact)
+        - _meta.projectData in widget (LLM-readable)
+      context: >
+        "Silent" is the key word. Explicit tool calls are the data flow.
+        The lab does NOT phone home, NOT exfiltrate, NOT persist.
+    - id: G-06-WIDGET-ISOLATION
+      statement: Widget runs in ChatGPT iframe with no external dependencies.
+      strategy: S-06-WIDGET-ISOLATION
+      solutions:
+        - id: SOL-13-CSP
+          evidence: src/server/resources/widget-resource.ts:27-31 (no connectDomains, no resourceDomains, no frameDomains)
+        - id: SOL-14-TEXT-CONTENT
+          evidence: src/widget/widget.ts (only textContent, no innerHTML)
+        - id: SOL-15-BRIDGE-DETECTION
+          evidence: src/widget/widget.ts:119-129 (hasUsableBridge, describeBridge)
+      limitations:
+        - postMessage to window.parent without origin filter
+        - _meta.projectData in widget memory
+  limitations_summary:
+    - OAuth 2.1 AS not implemented (GAP G-01)
+    - Real ChatGPT e2e not verified on this host (GAP G-02)
+    - Golden fixture from real Anotator8 export missing (GAP G-04)
+    - 10k+ load not tested (GAP G-05)
+    - No reverse proxy / rate limiting (GAP G-06)
+    - Per-tool scope enforcement not implemented (depends on G-01)
+    - Demo mode is open if no token (GAP G-15)
+  confidence: MEDIUM-HIGH for local / demo use; LOW for production
+  reviewer: Mavis (knowledge-base retrofit run)
+  review_due: 2026-09-07

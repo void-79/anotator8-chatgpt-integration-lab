@@ -14,6 +14,8 @@ const steps: Array<{ name: string; script: string }> = [
   { name: "test", script: "test" },
   { name: "smoke", script: "smoke" },
   { name: "demo:stdio", script: "demo:stdio" },
+  { name: "validate:canonical", script: "validate:canonical" },
+  { name: "validate:truth-passport", script: "validate:truth-passport" },
 ];
 
 let pass = 0;

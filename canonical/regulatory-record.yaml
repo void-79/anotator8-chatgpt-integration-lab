@@ -1,0 +1,143 @@
+regulatory_record:
+  object_id: regulatory-record-v0.5.0
+  object_type: REGULATORY_RECORD
+  title: Regulatory / Compliance Map — все применимые требования
+  generated_at: 2026-06-07
+  purpose: >
+    Список всех регуляторных и vendor-требований, применимых к lab.
+    Каждое требование имеет status, evidence, gap_link, safe_step.
+  categories:
+    - id: CAT-PRIVACY
+      title: Privacy (FERPA / COPPA / GDPR)
+      applies_because: >
+        Anotator8 — education tool, может содержать student data
+        (isEducationRecord, dataResidency, ownerId, classroomId).
+      requirements:
+        - id: REG-FERPA-01
+          rule: >
+            Education records не должны быть раскрыты без consent.
+          status: PARTIALLY_MET
+          evidence: >
+            Lab preserves these fields as opaque (canonical/product-dossier.yaml
+            § privacy); не интерпретирует, не фильтрует. НО не редактирует
+            при передаче в widget _meta.projectData.
+          gap_link: G-16
+          safe_step: redact _meta.projectData перед production
+        - id: REG-COPPA-01
+          rule: >
+            Данные детей <13 не должны собираться без verifiable parental consent.
+          status: NEEDS_DPIA
+          evidence: >
+            Lab не имеет UI для сбора данных — caller (ChatGPT) решает.
+            Но раз widget получает full projectData, нужно DPIA-lite.
+          gap_link: G-16
+          safe_step: >
+            Документировать в privacy policy template (CHATGPT_APP_STORE.md § 3)
+            что lab обрабатывает только явно переданные projectData.
+        - id: REG-GDPR-01
+          rule: >
+            Right to erasure, data minimization, purpose limitation.
+          status: NEEDS_DPIA
+          evidence: >
+            Lab не пишет на диск, не persists; но audit log может содержать
+            sanitized summary. Right to erasure не реализован.
+          gap_link: G-16
+          safe_step: >
+            Добавить documented retention policy для audit log;
+            добавить way для maintainer стирать log.
+    - id: CAT-AUTH
+      title: Authentication / OAuth
+      applies_because: >
+        Lab exposed over HTTP (Streamable HTTP). Любая public exposure
+        должна иметь authentication.
+      requirements:
+        - id: REG-RFC-9728
+          rule: >
+            OAuth 2.0 Protected Resource Metadata MUST be served at
+            /.well-known/oauth-protected-resource[/<path>] (RFC 9728 §3.1).
+          status: MET
+          evidence: >
+            src/server/oauth/protected-resource-metadata.ts + tests/integration/oauth/protected-resource.test.ts
+          gap_link: none
+        - id: REG-RFC-9728-5.1
+          rule: >
+            401/403 MAY include resource_metadata in WWW-Authenticate (RFC 9728 §5.1).
+          status: MET
+          evidence: >
+            src/server/auth.ts buildBearerChallenge() + v0.3.0 release notes
+          gap_link: none
+        - id: REG-RFC-6750
+          rule: >
+            Bearer token in Authorization header (RFC 6750 §2.1).
+            WWW-Authenticate: Bearer realm=..., error=... (§3).
+          status: MET
+          evidence: >
+            src/server/auth.ts + src/server/app.ts
+          gap_link: none
+        - id: REG-OAUTH-2.1
+          rule: >
+            Production auth should be OAuth 2.1 (Apps SDK Auth docs).
+            RFC 6749 (AS) + RFC 8414 (AS metadata) + RFC 7591 (DCR)
+            + token introspection + per-tool scopes.
+          status: NOT_MET
+          evidence: >
+            Lab has PRM foundation + Bearer; no AS, no scopes, no JWKS.
+          gap_link: G-01, G-07
+          safe_step: discovery-lead/oauth-2.1-as-ref-impl
+    - id: CAT-VENDOR
+      title: Vendor (OpenAI Apps SDK)
+      applies_because: Lab is a ChatGPT App.
+      requirements:
+        - id: REG-APPS-TOOL-HINTS
+          rule: >
+            readOnlyHint / destructiveHint / openWorldHint must be honest.
+          status: MET
+          evidence: >
+            src/server/app.ts:75 — all 8 tools declared
+            readOnlyHint: true, destructiveHint: false, openWorldHint: false.
+          gap_link: none
+        - id: REG-APPS-WIDGET-CSP
+          rule: >
+            Widget CSP should not allow external connectDomains/resourceDomains
+            unless required.
+          status: MET
+          evidence: >
+            src/server/resources/widget-resource.ts:27-31 declares both empty.
+          gap_link: none
+        - id: REG-APPS-FRAMEDOMAINS
+          rule: >
+            Apps that set frameDomains get extra iframe review.
+          status: NOT_TRIGGERED
+          evidence: >
+            Lab does NOT set frameDomains (sidesteps extra review per
+            docs/CHATGPT_APP_STORE.md:57-62).
+          gap_link: none
+        - id: REG-APPS-PRIVACY-POLICY
+          rule: >
+            Public App Store submission requires privacy policy at public URL.
+          status: NOT_MET
+          evidence: >
+            Template in CHATGPT_APP_STORE.md § 3; not published.
+          gap_link: G-19
+          safe_step: maintainer publishes
+        - id: REG-APPS-SCREENSHOTS
+          rule: >
+            Submission requires 3+ screenshots of the widget.
+          status: NOT_MET
+          gap_link: G-19
+          safe_step: capture widget screenshots
+        - id: REG-APPS-SUPPORT-CONTACT
+          rule: >
+            Submission requires support contact (URL or email).
+          status: NOT_MET
+          gap_link: G-19
+          safe_step: maintainer provides
+  overall_status:
+    privacy: NEEDS_DPIA (FERPA + COPPA + GDPR)
+    auth: NEEDS_OAUTH_2_1_AS
+    vendor_apps_sdk: NEEDS_PRIVACY_POLICY + SCREENSHOTS + SUPPORT
+    rfc_compliance: MET (RFC 9728 + RFC 6750)
+  safe_reuse_summary: >
+    Никакие claims «compliant with X» не должны делаться без явного
+    evidence capture. RFC compliance — MET. Privacy — NEEDS DPIA.
+    App Store public submission — BLOCKED on G-01, G-19.

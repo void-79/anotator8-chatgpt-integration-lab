@@ -1,0 +1,43 @@
+answer_fixture:
+  id: rfc-9728-vs-as
+  object_type: ANSWER_FIXTURE
+  generated_at: 2026-06-07
+  purpose: "Проверяет: Does having RFC 9728 PRM mean the lab is OAuth 2.1 ready?"
+  question: "The lab serves RFC 9728 Protected Resource Metadata at /.well-known/oauth-protected-resource. Is the lab OAuth 2.1 ready?"
+  answer: No.
+  ceiling: RFC_9728_FOUNDATION_ONLY
+  explanation: >
+    RFC 9728 PRM is a discovery foundation. It tells clients WHERE the
+    authorization servers are (via the authorization_servers field). The
+    lab currently:
+    ✅ Serves PRM at /.well-known/oauth-protected-resource[/<path>]
+    ✅ Includes resource_metadata in WWW-Authenticate challenge (§5.1)
+    ✅ Has CORS * on well-known (public discovery)
+    ❌ Does NOT implement any OAuth 2.1 authorization server (AS)
+    ❌ Does NOT implement token issuance, introspection, JWKS, DCR
+    ❌ Does NOT implement per-tool scope enforcement
+    The PRM foundation is the "discovery" part. The AS is the
+    "implementation" part. Without AS, the lab uses static Bearer tokens
+    (MCP_AUTH_TOKEN) — which is sufficient for local demo but NOT for
+    App Store public submission.
+  forbidden_shortcuts:
+    - "Claiming the lab is OAuth 2.1 ready (it has PRM, not AS)"
+    - "Claiming the lab is production auth ready (it needs AS)"
+    - "Submitting to App Store without implementing AS"
+  safe_next_step: >
+    Implement OAuth 2.1 AS (token issuance, introspection, JWKS, DCR)
+    OR integrate Auth0/Keycloak. See
+    canonical/discovery-lead/oauth-2.1-as-ref-impl.yaml.
+  evidence:
+    - src/server/oauth/protected-resource-metadata.ts (PRM doc builder)
+    - src/server/app.ts (well-known route)
+    - src/server/auth.ts (Bearer, static MCP_AUTH_TOKEN)
+    - docs/CHATGPT_APP_SETUP.md § Production Auth Gap
+    - docs/SECURITY.md § Remaining Concerns
+    - OFF-RFC-9728 (PRM)
+    - OFF-RFC-6750 (Bearer)
+    - OFF-RFC-8414 (AS Metadata — not implemented)
+  related_truth_passport: truth-passport/decision-auth-strategy.yaml
+  related_gaps: [G-01, G-07, G-15]
+  related_analogs:
+    - "DNS discovery ≠ having a server" (similar pattern)

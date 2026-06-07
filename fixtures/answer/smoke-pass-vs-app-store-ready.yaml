@@ -1,0 +1,38 @@
+answer_fixture:
+  id: smoke-pass-vs-app-store-ready
+  object_type: ANSWER_FIXTURE
+  generated_at: 2026-06-07
+  purpose: "Проверяет: Does smoke PASS mean the lab is App Store ready?"
+  question: "npm run verify shows 4/4 PASS (build, test 118/118, smoke, demo:stdio). Is the lab App Store ready?"
+  answer: No.
+  ceiling: app_review_ready (NOT production-ready, NOT App Store-ready)
+  explanation: >
+    Smoke PASS verifies protocol conformance: initialize → tools/list →
+    tools/call → report, OAuth PRM discovery, stdio roundtrip. This is
+    necessary but not sufficient for App Store submission. The following
+    are still BLOCKING:
+    1. No OAuth 2.1 Authorization Server (GAP G-01) — Apps SDK submission
+       guidelines require OAuth for public apps.
+    2. No privacy policy at public URL (GAP G-19).
+    3. No 3+ widget screenshots (GAP G-19).
+    4. No support contact (GAP G-19).
+    5. No live ChatGPT Developer Mode e2e test (GAP G-02).
+    6. No reverse proxy / rate limiting (GAP G-06).
+    Tool surface is strong: 8 readOnly tools, readOnlyHint: true, no
+    frameDomains (sidesteps extra iframe review). But tool surface alone
+    is not enough.
+  forbidden_shortcuts:
+    - "Claiming App Store ready based on smoke alone"
+    - "Skipping privacy policy or screenshots"
+    - "Submitting without MCP_AUTH_TOKEN set for reviewer"
+  safe_next_step: >
+    Review docs/CHATGPT_APP_STORE.md § 0 pre-submission checklist. All
+    [GAP] items must be resolved before clicking Submit.
+  evidence:
+    - npm run verify output (4/4 PASS)
+    - docs/CHATGPT_APP_STORE.md § 0 (five-line summary, 5 items)
+    - docs/CHATGPT_APP_STORE.md § 1 (pre-submission checklist, 8 rows with [GAP])
+  related_truth_passport: truth-passport/lab-v0.4.0.yaml
+  related_gaps: [G-01, G-02, G-06, G-19]
+  related_analogs:
+    - CI green ≠ production deploy (analog of "tests pass but not production ready")

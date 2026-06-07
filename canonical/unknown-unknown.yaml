@@ -1,0 +1,116 @@
+unknown_unknown:
+  object_id: unknown-unknown-v0.5.0
+  object_type: UNKNOWN_UNKNOWN_RECORD
+  title: Unknown Unknowns — вопросы, которые могут даже не быть заданы
+  generated_at: 2026-06-07
+  purpose: >
+    Зафиксировать риски, которые не покрыты явными claims и gaps. Каждый
+    unknown_unknown — это вопрос, который может полностью изменить ответ
+    на policy, production readiness или correctness.
+  count: 10
+  entries:
+    - id: UU-01
+      question: >
+        Что произойдёт при одновременном MCP session 401 + Apps bridge call?
+      why_unasked: >
+        Не тестировалось явно. SDK recursion bug workaround в app.ts:22-41
+        покрывает server.close path, но не "401 во время rpcRequest".
+      risk_if_ignored: High (race condition в widget)
+      safe_check: deterministic replay в vitest с mock 401
+      related: src/widget/widget.ts:131-142
+    - id: UU-02
+      question: >
+        Anotator8 v25+ изменит UDMNode shape — adapter упадёт?
+      why_unasked: >
+        Adapter is robust через unknownFields preservation, но validate_project
+        может выдать false negatives для новых required fields.
+      risk_if_ignored: Medium (post-release)
+      safe_check: contract test с синтетическим v25-shaped fixture
+      related: canonical/product-dossier.yaml § upgrade_robustness
+    - id: UU-03
+      question: >
+        Что если ChatGPT пошлёт widget malformed JSON в ui/notifications/tool-result?
+      why_unasked: >
+        Widget использует `result.structuredContent || {}`; UI пустеет, no crash.
+        Но если ChatGPT пошлёт `structuredContent: null` vs `undefined` — поведение
+        может отличаться.
+      risk_if_ignored: Low
+      safe_check: contract test с malformed message payload
+      related: src/widget/widget.ts:36-59
+    - id: UU-04
+      question: >
+        Что если 1000+ concurrent sessions?
+      why_unasked: >
+        Streamable HTTP transport per-session; нет rate limit; memory bounded
+        by `transports.size`. Node 24 default heap ~4GB.
+      risk_if_ignored: Medium (DoS)
+      safe_check: load test с k6 или autocannon
+      related: src/server/app.ts:119-196
+    - id: UU-05
+      question: >
+        Что если project JSON содержит prompt injection через label/subtitle?
+      why_unasked: >
+        suggest_labels явно НЕ изобретает labels; но _meta.projectData в widget
+        может прочитать LLM и попасть в prompt injection через невидимые поля.
+      risk_if_ignored: Medium
+      safe_check: malicious fixture test (label = "Ignore previous instructions")
+      related: src/widget/widget.ts:38, canonical/threat-record.yaml
+    - id: UU-06
+      question: >
+        Что если Apps SDK добавит frameDomains requirement — придётся переcerts?
+      why_unasked: >
+        Lab НЕ ставит frameDomains сейчас (см. docs/CHATGPT_APP_STORE.md:57-62).
+        Если Apps SDK сделает это required для всех apps — lab потребует
+        пересмотра.
+      risk_if_ignored: Low (forward-looking)
+      safe_check: подписка на Apps SDK release notes
+      related: docs/CHATGPT_APP_STORE.md § 1.3
+    - id: UU-07
+      question: >
+        Что если ChatGPT Apps SDK сменит postMessage origin?
+      why_unasked: >
+        Widget шлёт на window.parent без origin filter (src/widget/widget.ts:70).
+        Если host окажется вредоносным — token leak в _meta.projectData.
+      risk_if_ignored: Medium
+      safe_check: добавить origin filter в postMessage (post v0.5.0)
+      related: src/widget/widget.ts:69-79
+    - id: UU-08
+      question: >
+        Что если MCP spec 2026-06+ сломает наш registerAppTool cast `as never`?
+      why_unasked: >
+        Cast задокументирован как SDK 1.29.0 quirk. Если SDK выпустит typed
+        callback — cast больше не нужен, но может стать type error.
+      risk_if_ignored: Medium (upgrade time)
+      safe_check: typecheck after upgrade
+      related: src/server/app.ts:73-74, 83
+    - id: UU-09
+      question: >
+        Что если App Store review попросит OAuth 2.1 _до_ approval?
+      why_unasked: >
+        Документировано в CHATGPT_APP_STORE.md:66, maintainer должен это понимать.
+        Если OpenAI ужесточит policy — lab потребует AS.
+      risk_if_ignored: High (App Store)
+      safe_check: подписка на Apps SDK guidelines
+      related: discovery-lead/oauth-2.1-as-ref-impl
+    - id: UU-10
+      question: >
+        Что если maintainer поменяет fixture но не переcертифицирует test?
+      why_unasked: >
+        gen:fixture:check уже в package.json; но reviewer всё равно должен
+        запустить npm test после gen.
+      risk_if_ignored: Low (process)
+      safe_check: pre-commit hook на gen:fixture
+      related: package.json scripts
+  invariants:
+    - id: UU-INV-01
+      rule: >
+        Каждый unknown_unknown должен иметь safe_check (даже если это
+        "подписка на release notes"). Без safe_check — записать в GAP_RECORD.
+    - id: UU-INV-02
+      rule: >
+        Если unknown_unknown подтверждается, он становится gap, потом
+        discovery_lead, потом decision или tool_record.
+  promotion_criteria:
+    from_unknown_to_gap: "if risk_if_ignored >= medium AND safe_check is feasible"
+    from_gap_to_discovery_lead: "if safe_check requires external dependency or long work"
+    from_discovery_to_decision: "if a decision must be made (e.g. add sampling yes/no)"

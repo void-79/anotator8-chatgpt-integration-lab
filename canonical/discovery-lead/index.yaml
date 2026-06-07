@@ -1,0 +1,188 @@
+discovery_lead:
+  - id: mcp-sdk-1.30
+    title: Track MCP SDK 1.30+ release
+    source_family: OFFICIAL_SPEC
+    discovery_status: SEARCHED_NO_RESULT (as of 2026-06-07)
+    why_it_matters: >
+      Current SDK is 1.29.0 with a known recursion bug in transport.onclose → server.close.
+      Upstream may release a fix in 1.30+ that lets us drop the unhandledRejection
+      workaround in src/server/app.ts:22-41.
+    target_signal: '"@modelcontextprotocol/sdk" release notes mentioning "recursion", "RangeError", or "transport.onclose" fix'
+    search_command_hint: site:github.com/modelcontextprotocol/typescript-sdk releases
+    expected_artifact: new SDK version with changelog
+    next_step: subscribe to GitHub releases
+    blocking_for: removing workaround in app.ts
+    related_gap: G-09
+    risk_if_ignored: workaround stays forever, no upgrade pressure
+    safe_reuse: pure upgrade; no behavior change beyond dropping the handler
+    unsafe_misuse: >
+      Upgrade without re-running tests + smoke + verify; SDK API could
+      have moved registerAppTool signature and break the `as never` cast.
+  - id: apps-sdk-post-2026-01-26
+    title: Track Apps SDK updates after 2026-01-26
+    source_family: OFFICIAL_SPEC
+    discovery_status: SEARCHED_NO_RESULT (as of 2026-06-07)
+    why_it_matters: >
+      Current bridge protocol version is 2026-01-26. If OpenAI ships a newer
+      version with breaking changes, our widget (src/widget/widget.ts) may
+      need a primary→fallback role swap.
+    target_signal: developers.openai.com/apps-sdk/quickstart version bump
+    search_command_hint: site:developers.openai.com apps-sdk
+    expected_artifact: new quickstart URL or version string
+    next_step: monthly check of quickstart page
+    blocking_for: widget bridge strategy
+    related_gap: G-14
+    risk_if_ignored: widget works on 2026-01-26 hosts; silently degrades on newer
+    safe_reuse: bump BRIDGE_PROTOCOL_VERSION constant in widget.ts
+    unsafe_misuse: bumping without updating tests/contract/widget-bridge.test.ts
+  - id: oauth-2.1-as-ref-impl
+    title: OAuth 2.1 Authorization Server reference implementation
+    source_family: OFFICIAL_SPEC + OPEN_SOURCE
+    discovery_status: LEAD_FOUND
+    candidates:
+      - reference: https://www.rfc-editor.org/rfc/rfc8414 (RFC 8414 AS Metadata)
+      - reference: https://www.rfc-editor.org/rfc/rfc6749 (RFC 6749 OAuth 2.0)
+      - reference: https://www.rfc-editor.org/rfc/rfc7591 (RFC 7591 Dynamic Client Registration)
+    why_it_matters: >
+      v0.3.0 ships the discovery foundation (RFC 9728 PRM). The actual
+      authorization server (AS) endpoints are not implemented. Without AS,
+      the lab cannot pass App Store review for public submission.
+    target_signal: >
+      An open-source OAuth 2.1 AS reference that can be embedded or
+      deployed alongside the lab.
+    search_command_hint: "'OAuth 2.1' 'authorization server' 'TypeScript' reference implementation"
+    expected_artifact: an AS library we can integrate
+    next_step: evaluate OIDC providers, Keycloak in Docker, or auth0
+    blocking_for: App Store public submission
+    related_gap: G-01
+    risk_if_ignored: "'lab is App Store ready' claim is false"
+    safe_reuse: integrate a maintained OAuth 2.1 AS library
+    unsafe_misuse: write our own crypto; do not roll your own OAuth
+  - id: vitest-4-rolldown-windows
+    title: Unblock vitest 4.x on Windows App Control
+    source_family: OPEN_SOURCE + PLATFORM_POLICY
+    discovery_status: BLOCKED
+    why_it_matters: >
+      vitest 4.x ships with rolldown (Rust-based bundler) and pre-built
+      native binding. Windows App Control blocks .node binary load in
+      this environment. Upgrading would close the 1 remaining devDep
+      critical (UI server RCE, not used).
+    target_signal: rolldown Windows binding fix or vitest 5.x without rolldown
+    search_command_hint: site:github.com/rolldown/rolldown windows
+    expected_artifact: a release that ships a signed .node binding
+    next_step: re-attempt npm install vitest@^4 every quarter
+    blocking_for: devDep audit cleanliness
+    related_gap: G-03
+    risk_if_ignored: 1 critical stays in devDep forever
+    safe_reuse: pure upgrade; production runtime not affected
+    unsafe_misuse: forcing install with --force, bypassing SmartScreen
+  - id: cloudflare-tunnel-mcp
+    title: Cloudflare Tunnel recipe for MCP / ChatGPT Developer Mode
+    source_family: TOOL
+    discovery_status: LEAD_FOUND
+    candidates:
+      - reference: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+    why_it_matters: >
+      Live ChatGPT Developer Mode requires the local MCP server to be
+      reachable over HTTPS. The lab does not have a tunnel client
+      installed on this host. Cloudflare Tunnel is the recommended
+      ephemeral option.
+    target_signal: a verified cloudflared command + cloudflared installed
+    search_command_hint: cloudflared tunnel --url http://127.0.0.1:8787 mcp
+    expected_artifact: a public https://*.trycloudflare.com URL
+    next_step: install cloudflared; run command; document in CHATGPT_APP_SETUP.md
+    blocking_for: live ChatGPT e2e verification
+    related_gap: G-10
+    risk_if_ignored: "'live e2e verified' claim stays unprovable"
+    safe_reuse: ephemeral; no port forwarding required
+    unsafe_misuse: leaving the tunnel open without MCP_AUTH_TOKEN
+  - id: golden-anotator8-fixture
+    title: Export a real Anotator8 project file as a golden fixture
+    source_family: REPO
+    discovery_status: LEAD_FOUND
+    why_it_matters: >
+      The current fixtures are synthetic + deterministic near-real generator.
+      They cover the KNOWN_PROJECT_FIELDS but not real-world edge cases
+      (e.g. nested extensions, large timelines, exotic locales, real Loro state).
+    target_signal: an actual .anatator.json exported from Anotator8 UI v24.0.0
+    expected_artifact: a redacted .anotator.json file checked in as fixtures/golden-project.anotator8.json
+    next_step: open Anotator8, create a small project, export, redact PII
+    blocking_for: "'lab handles real Anotator8 edge cases' claim"
+    related_gap: G-04
+    risk_if_ignored: false negatives in adapter for novel field shapes
+    safe_reuse: anonymize ownerId, classroomId, isEducationRecord before commit
+    unsafe_misuse: commit unredacted real student data
+  - id: reverse-proxy-mcp
+    title: Reverse proxy (nginx / cloudflared) recipe for MCP
+    source_family: TOOL
+    discovery_status: LEAD_FOUND
+    why_it_matters: >
+      The lab server does not implement rate limiting or WAF. Any public
+      exposure needs a reverse proxy in front. Without it, the server is
+      DoS-vulnerable.
+    target_signal: an nginx.conf with rate_limit_zone and a TLS terminator
+    search_command_hint: nginx rate_limit MCP Streamable HTTP
+    expected_artifact: a reference nginx.conf + cloudflared config
+    next_step: add docs/PRODUCTION_DEPLOY.md with both options
+    blocking_for: any public exposure
+    related_gap: G-06
+    risk_if_ignored: DoS, no audit log rotation
+    safe_reuse: industry-standard nginx rate limit + WAF rules
+    unsafe_misuse: skipping rate limit, exposing raw token to public clients
+  - id: load-test-10k-annotations
+    title: Load test with >10k annotations
+    source_family: METHOD
+    discovery_status: NOT_SEARCHED
+    why_it_matters: >
+      Adapter is O(n) on nodes; report generation may hit string length
+      limits for very large projects. No benchmark exists.
+    target_signal: a generated fixture with 10k+ annotations + a perf script
+    expected_artifact: scripts/load-test.ts + report on p50/p95/p99
+    next_step: write load-test generator + measure on local machine
+    blocking_for: "'lab scales to production sizes' claim"
+    related_gap: G-05
+    risk_if_ignored: OOM or string-len error in production
+    safe_reuse: vitest bench or a custom tsx script
+    unsafe_misuse: load test against production tunnel
+  - id: real-chatgpt-developer-mode-e2e
+    title: End-to-end live ChatGPT Developer Mode verification
+    source_family: RUNTIME
+    discovery_status: BLOCKED (no paid account + no tunnel on this host)
+    why_it_matters: >
+      Protocol layer is verified (smoke + demo:stdio + contract tests).
+      Apps-bridge 2026-01-26 is verified (widget-bridge.test.ts).
+      RFC 9728 is verified (protected-resource.test.ts). But the actual
+      ChatGPT client + tunnel + account has not been wired. This is the
+      single biggest "is it actually working in production ChatGPT?"
+      unknown.
+    target_signal: >
+      A log entry from `npm run smoke` + a screenshot from ChatGPT
+      developer mode showing the 8 tools listed and a tool call returning
+      data.
+    expected_artifact: docs/E2E_CHATGPT_LOG.md with timestamped trace
+    next_step: install cloudflared; expose; open ChatGPT Dev Mode; run
+    blocking_for: "any 'production ChatGPT' claim"
+    related_gap: G-02
+    risk_if_ignored: "'ChatGPT e2e verified' claim is unsubstantiated"
+    safe_reuse: ephemeral tunnel + ephemeral token + screenshots
+    unsafe_misuse: leave tunnel open + log tokens
+  - id: mcp-sampling-roots-prompts
+    title: MCP sampling / roots / prompts endpoints
+    source_family: OFFICIAL_SPEC
+    discovery_status: NOT_SEARCHED
+    why_it_matters: >
+      The lab advertises 1 prompt (review_anotator8_project). It does
+      NOT implement sampling (server → client LLM calls) or roots
+      (client → server filesystem scope). Both are optional in MCP
+      2025-06-18. Adding sampling would enable a "summarize this project
+      with the model" tool; adding roots would let the client advertise
+      which paths the server is allowed to read.
+    target_signal: spec guidance on when to use sampling vs tools
+    search_command_hint: site:modelcontextprotocol.io sampling
+    expected_artifact: a decision record on whether to add them
+    next_step: read spec; decide; add to discovery_lead
+    blocking_for: "nothing (optional features)"
+    related_gap: not in G-01..G-20; forward-looking
+    risk_if_ignored: lab stays minimal but sufficient
+    safe_reuse: optional; do not add unless needed
+    unsafe_misuse: add sampling without privacy review

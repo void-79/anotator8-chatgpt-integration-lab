@@ -1,0 +1,42 @@
+answer_fixture:
+  id: allowlisted-fixture-vs-user-data
+  object_type: ANSWER_FIXTURE
+  generated_at: 2026-06-07
+  purpose: "Проверяет: Does using the allowlisted fixture mean the lab is privacy-safe by default?"
+  question: "The lab loads a synthetic fixture (sample-project.anotator8.json) when called with fixtureId. Does this mean the lab is privacy-safe by default?"
+  answer: No.
+  ceiling: NEEDS_DPIA
+  explanation: >
+    The allowlisted fixture is synthetic + deterministic near-real generator
+    output. It contains no real PII, no real student data, no real
+    education records. This proves the lab can operate on synthetic data
+    without privacy risk. However:
+    1. When a caller passes projectData (not fixtureId), the full project
+       JSON is processed by the adapter, stored in memory, and echoed
+       back via structuredContent.
+    2. Widget receives hidden _meta.projectData and can render it.
+    3. LLM sees tool arguments and structuredContent — including any
+       PII in the project.
+    4. isEducationRecord, dataResidency, ownerId, classroomId are
+       preserved as opaque fields (not redacted, not interpreted).
+    5. Lab does NOT implement consent, DPIA, or retention controls.
+    Privacy is the caller's responsibility. Lab is a tool, not a
+    compliance solution.
+  forbidden_shortcuts:
+    - "Claiming the lab is privacy-safe by default"
+    - "Passing real student data without redaction"
+    - "Assuming fixtureId mode is the only mode"
+  safe_next_step: >
+    Implement privacy redaction pipeline (GAP G-16): redact
+    isEducationRecord, dataResidency, ownerId, classroomId from
+    widget _meta.projectData; document in privacy policy.
+  evidence:
+    - src/server/storage.ts (fixtureId → loadProjectInput)
+    - src/server/anotator8-adapter.ts (parse → preserve as opaque)
+    - src/widget/widget.ts:38 (_meta.projectData assignment)
+    - docs/PRODUCT_SURFACE.md § FERPA / COPPA / GDPR
+    - docs/SECURITY.md § Data Handling
+  related_truth_passport: truth-passport/tool-inspect-project.yaml
+  related_gaps: [G-16, UU-05]
+  related_analogs:
+    - "Using a test database ≠ production privacy" (similar pattern)

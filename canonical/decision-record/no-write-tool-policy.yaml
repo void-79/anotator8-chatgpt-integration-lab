@@ -1,0 +1,93 @@
+decision_record:
+  object_id: decision-no-write-tool-policy
+  object_type: DECISION_RECORD
+  title: No Write Tool Policy — read-only MVP, write tools deferred
+  generated_at: 2026-06-07
+  source_of_truth: src/server/tools/index.ts, config/capabilities.example.json
+  status: ACCEPTED + IMPLEMENTED + INTENTIONALLY_RESTRICTIVE
+  decision_summary: >
+    Lab не предоставляет write/mutation tools в v0.4.0 / v0.5.0. Все 8 tools
+    объявлены readOnlyHint: true, destructiveHint: false, openWorldHint: false.
+    Write tools (propose_annotation_changes, apply_annotation_patch,
+    generate_subtitle_cleanup_patch, suggest_timeline_markers) явно
+    перечислены в capabilities.example.json как disabledFutureTools.
+    Write tools будут добавлены ТОЛЬКО после OAuth 2.1 AS + reversal model.
+  context:
+    problem: >
+      Annotation tool с write capability может изменить project без
+      explicit user approval. ChatGPT in tool-calling mode не должен
+      иметь authority to mutate. Read-only MVP first, write tools later
+      with proper auth + consent + reversal.
+    alternatives_considered:
+      - alt: write tools сразу, без OAuth
+        rejected: небезопасно
+      - alt: write tools с explicit user prompt каждый раз
+        rejected: brittle, не решает audit + reversal
+      - alt: write tools через patch proposal
+        accepted_future: after OAuth 2.1 AS, with reversible patch
+  chosen_solution: read-only MVP, write tools deferred
+  evidence:
+    repo_evidence:
+      - src/server/app.ts:75 (all 8 tools readOnlyHint: true)
+      - src/server/tools/index.ts (toolRegistry with 8 read-only tools)
+      - config/capabilities.example.json:15-20 (disabledFutureTools)
+    runtime_evidence: tests/contract/mcp-tool-contracts.test.ts
+    official_doc_evidence: OFF-APPS-SDK-QUICKSTART (readOnlyHint semantics)
+  evidence_status: CONFIRMED_FOR_PLATFORM
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY
+  release_readiness: app_review_ready (read-only is a strong starting position per CHATGPT_APP_STORE.md § 1.1)
+  decision_owner: lab maintainer
+  decision_date: 2026-06-07 (reaffirmed; original from v0.1.0)
+  review_due: after OAuth 2.1 AS (post G-01)
+  re_evaluate_when:
+    - OAuth 2.1 AS is implemented
+    - Reversible patch model is designed
+    - User explicitly requests write capability
+  impact:
+    what_changes:
+      - tools/index.ts (no new tool added)
+      - capabilities.example.json (disabledFutureTools list)
+    what_does_not_change:
+      - 8 read-only tools
+      - audit log shape
+      - transport
+  decision_refs:
+    upstream: OFF-APPS-SDK-QUICKSTART, OFF-APPS-SDK-SEC
+    related_decisions: [decision-auth-strategy, decision-no-shell-exec-policy]
+  ceiling: CONFIRMED_FOR_PLATFORM
+  ceiling_explanation: >
+    Policy is enforced by code (registerAppTool annotations +
+    capabilities.example.json disabledFutureTools). Apps SDK reviewer
+    will see readOnlyHint: true on every tool.
+  known:
+    - 8 tools, all read-only
+    - 4 write tools explicitly disabled
+    - No write tool can be added without modifying tools/index.ts
+  unknown:
+    - When (or if) write tools will be added
+  not_proven:
+    - That this policy is sufficient for any real production use case
+      beyond demo / read-only review
+  assumptions:
+    - The lab's purpose is read-only review (not mutation)
+    - Mutation belongs in Anotator8 itself, not in ChatGPT
+  contradictions: none
+  allowed_next_steps:
+    - Design reversible patch model (post G-01)
+    - Add propose_annotation_changes (post G-01)
+    - Add apply_annotation_patch with explicit user approval (post G-01)
+  forbidden_shortcuts:
+    - Adding any write tool without OAuth 2.1 AS
+    - Adding any write tool that mutates Anotator8 backend directly
+    - Bypassing explicit user approval for any mutation
+  related_sources:
+    - config/capabilities.example.json
+    - src/server/app.ts
+    - docs/CHATGPT_APP_STORE.md § 1.1
+    - docs/SECURITY.md § Tool Safety
+  related_gaps: [G-01, G-07]
+  related_truth_passport: truth-passport/decision-no-write-tool-policy.yaml
+  related_analogs:
+    - GitHub MCP server (mostly read-only, with explicit write tools)
+    - Stripe MCP server (read-only by default, write requires explicit scope)
+  last_reviewed: 2026-06-07

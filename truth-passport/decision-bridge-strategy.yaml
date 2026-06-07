@@ -1,0 +1,67 @@
+truth_passport:
+  object_id: decision-bridge-strategy
+  object_type: TRUTH_PASSPORT
+  title: truth passport for decision-bridge-strategy
+  generated_at: 2026-06-07
+  current_answer_ceiling: APPS_SDK_BRIDGE_LOCAL_ONLY + CONFIRMED_FOR_PLATFORM
+  ceiling_calculation: >
+    min(vehicle_specificity=APPS_SDK_PLATFORM_ONLY [ChatGPT host behavior unknown],
+        source_snapshot_state=LIVE [widget.ts + bridge.test.ts],
+        evidence_strength=CONFIRMED_FOR_PLATFORM,
+        decision_status=ACCEPTED + IMPLEMENTED,
+        privacy_gate=N/A,
+        safety_gate=MEDIUM [postMessage without origin filter],
+        test_maturity=EMULATOR_READY [contract test source-level],
+        unresolved_gaps=G-02 + G-14 + UU-07,
+        release_readiness=app_review_ready,
+        exact_artifact_quality=PARTIAL [no live ChatGPT host test],
+        authorization_scope=Apps SDK 2026-01-26)
+  weakest_link: APPS_SDK_PLATFORM_ONLY (no real ChatGPT host verified)
+  vehicle_scope: ChatGPT iframe host (any 2026-01-26+ capable)
+  capability_scope: widget bridge detection
+  decision_refs: []
+  safety_status: GO_SIM + GO_READ_ONLY (with known postMessage caveat)
+  evidence_status: CONFIRMED_FOR_PLATFORM + APPS_SDK_BRIDGE_LOCAL_ONLY
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY
+  release_readiness: app_review_ready (with caveat)
+  privacy_status: N/A
+  source_snapshot_state: LIVE
+  confidence: MEDIUM
+  risk_level: MEDIUM (G-02 + UU-07)
+  completeness: 0.7
+  known:
+    - "BRIDGE_PROTOCOL_VERSION = 2026-01-26"
+    - "Primary: Apps host bridge (ui/initialize + tools/call)"
+    - "Fallback: legacy window.openai.callTool"
+    - "bridge-info span shows active bridge"
+    - "focus buttons hidden when no usable bridge"
+  unknown:
+    - "Real ChatGPT host behavior (G-02)"
+    - "Apps SDK post-2026-01-26 (G-14)"
+  not_proven:
+    - "All ChatGPT client versions speak 2026-01-26"
+    - "Legacy fallback is still accepted by ChatGPT"
+  assumptions:
+    - "BRIDGE_PROTOCOL_VERSION stays 2026-01-26 until next bump"
+  contradicted_or_conflicting: []
+  allowed_next_steps:
+    - "Add origin filter to postMessage (post UU-07)"
+    - "Promote to Apps SDK 2026-XX when released"
+  forbidden_shortcuts:
+    - "Claiming bridge is e2e verified (it is not, G-02)"
+    - "Removing legacy fallback without Apps SDK confirmation"
+    - "postMessage to window.parent without origin check"
+  required_artifacts_to_upgrade:
+    - "To E2E_VERIFIED: live ChatGPT Developer Mode (G-02)"
+  related_sources:
+    - canonical/decision-record/bridge-strategy.yaml
+    - src/widget/widget.ts
+    - tests/contract/widget-bridge.test.ts
+  related_gaps: [G-02, G-14, UU-07]
+  related_analogs:
+    - legacy postMessage handshake
+  related_methods:
+    - bridge detection
+    - graceful degradation
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07

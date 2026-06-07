@@ -1,0 +1,117 @@
+tool_record:
+  object_id: tool-validate-project
+  object_type: TOOL_RECORD
+  title: validate_project — check project consistency
+  generated_at: 2026-06-07
+  source_of_truth: src/server/tools/validate-project.ts
+  purpose: >
+    Проверяет консистентность Anotator8 project: уникальность id, валидность
+    time ranges, cue references, source metadata, типы нод и аннотаций.
+    Возвращает valid, errors, warnings, checks. Не модифицирует проект.
+  identity:
+    name: validate_project
+    title: "Validate Anotator8 Project"
+    description: "Check project consistency: ids, time ranges, subtitle cue references, source metadata, and unsupported node or annotation types."
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      openWorldHint: false
+  input_schema:
+    shape: object
+    fields:
+      - name: projectData
+        type: object
+        optional: true
+        description: Inline project JSON. Mutually exclusive with fixtureId.
+      - name: fixtureId
+        type: string
+        optional: true
+        description: Allowlisted fixture id. Mutually exclusive with projectData.
+  output_schema:
+    shape: object
+    fields:
+      - valid: boolean
+      - errors: array of objects (code, message, severity, path?)
+      - warnings: array of objects
+      - checks: array of objects (name, passed, detail?)
+  errors:
+    codes: [missing_field, invalid_input, too_large_input, internal_error]
+    size_limit: 10MB
+    never_leaked: [absolute paths, raw stack traces]
+  data_used:
+    input: same as inspect_project
+    output: validation result
+    bytes_read: 0
+  access_boundary:
+    scope: caller-supplied data only
+    requires_oauth: false
+    requires_consent: caller-supplied
+    reads_user_files: false
+  vehicle_claim_ceiling: PARTIAL_EXACT_MARKET
+  exact_vehicle_specificity: PARTIAL_EXACT_MARKET
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY + FIELD_READ_ONLY
+  release_readiness: app_review_ready
+  evidence:
+    repo_evidence: src/server/tools/validate-project.ts, src/server/anotator8-adapter.ts
+    runtime_evidence: tests/unit/validators.test.ts, tests/integration/tools.validate-project.test.ts
+    official_doc_evidence: OFF-MCP-SPEC, OFF-APPS-SDK-TEST
+    prototype_evidence: none
+    inference: >
+      Validator behavior is deterministic. Tests cover 4 categories:
+      id uniqueness, time range, cue references, source metadata.
+      Unknown annotation / shape types produce warning, not error.
+    unclear: Anotator8 v25+ compatibility (GAP G-04)
+  evidence_status: CONFIRMED_FOR_PLATFORM + PARTIAL_EXACT_MARKET
+  decision_refs: [decision-no-write-tool-policy, decision-no-shell-exec-policy]
+  privacy:
+    reads_pii: POSSIBLE
+    writes_pii: false
+    logs_pii: false
+    ferpa_coppa_gdpr_relevant: POSSIBLE
+  safety:
+    shell_exec: no
+    fs_write: no
+    arb_command: no
+  cybersecurity:
+    input_validation: Zod (projectData OR fixtureId, mutually exclusive)
+    output_sanitization: structuredContent + IntegrationError
+    auth_required: yes
+  tests:
+    files:
+      - tests/unit/validators.test.ts
+      - tests/integration/tools.validate-project.test.ts
+    test_cases: ~6
+    pass: true
+  release:
+    documented_in: docs/CHATGPT_APP_STORE.md § 2.3
+    sample_invocation: "Validate fixture sample-project and list every warning and error."
+    screenshot_prompt: "A report showing valid: true/false, list of errors (red), warnings (yellow), and checks array of named pass/fail rows."
+  known:
+    - Validator emits warning for orphan subtitle cues
+    - Validator emits warning for unknown annotation types
+    - Validator emits warning for unknown shapes
+    - Validator emits warning for invalid time ranges
+    - 1 unknown field preserved in fixture (futureReviewState)
+  unknown:
+    - Whether v25+ changes the ruleset
+  not_proven:
+    - Validator catches all real-world Anotator8 v24.0.0 edge cases
+  assumptions:
+    - The fixture (sample-project) represents a typical Anotator8 project
+  contradictions: none
+  allowed_next_steps:
+    - Add v25+ rules
+    - Add linter for known bad patterns
+  forbidden_shortcuts:
+    - Claiming validator is exhaustive
+  related_sources:
+    - src/server/anotator8-adapter.ts
+    - docs/PRODUCT_SURFACE.md
+  related_gaps: [G-04, G-16, UU-02]
+  related_analogs:
+    - jsonschema (similar validation pattern)
+  related_methods:
+    - rule-based validation
+  related_truth_passport: truth-passport/tool-validate-project.yaml
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07

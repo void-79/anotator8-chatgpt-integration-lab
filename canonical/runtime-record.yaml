@@ -1,0 +1,291 @@
+runtime_record:
+  object_id: runtime-record-lab-v0.4.0
+  object_type: RUNTIME_RECORD
+  title: Runtime & Dependency Layer — lab v0.4.0
+  generated_at: 2026-06-07
+  reviewer: Mavis (knowledge-base retrofit run)
+  source_of_truth: package.json + src/** + tests/**
+  purpose: >
+    Map "Hardware Layer" (SDV analog) to Anotator8/MCP runtime. Documents
+    Node version, dependencies, FS allowlist, shell-exec posture, and
+    transport matrix. This is the "what is actually installed and
+    running" snapshot, not the "what should be" wish list.
+  node:
+    version: 24.13.0
+    engines_minimum: ">=20.0.0 (per package.json engines)"
+    os_supported:
+      verified: Windows 11 Pro / PowerShell 5.1
+      claimed: any platform with Node >=20
+  package_manager:
+    name: npm
+    lockfile: package-lock.json
+    install_command: npm install
+  type: module
+  entry_point:
+    dist: dist/server/index.js
+    dev: src/server/index.ts (tsx watch)
+    http_default_port: 8787
+    http_default_host: 127.0.0.1
+  build:
+    command: npm run build (build:clean + tsc -p tsconfig.build.json)
+    output_dir: dist/
+    root_dir: src/
+    tsconfig: tsconfig.build.json (production) + tsconfig.json (IDE + tests)
+    tsc_version: 5.9.3
+    build_status: PASS (0 errors)
+  dependencies_production:
+    - name: "@modelcontextprotocol/sdk"
+      version: "^1.29.0"
+      role: MCP server + Streamable HTTP transport
+      evidence_path: src/server/app.ts
+      vulnerabilities: 0 known
+    - name: "@modelcontextprotocol/ext-apps"
+      version: "^1.7.4"
+      role: registerAppTool / registerAppResource
+      evidence_path: src/server/app.ts
+      vulnerabilities: 0 known
+      known_issue: >
+        recursion bug on transport.onclose → server.close under certain
+        error paths; non-fatal, captured to audit log
+        (see src/server/app.ts:22-41, tests/unit/rejection-capture.test.ts)
+    - name: zod
+      version: "^3.25.76"
+      role: I/O schema validation for all 8 tools
+      evidence_path: src/server/schemas.ts
+      vulnerabilities: 0 known
+  dependencies_development:
+    - name: "@rolldown/binding-win32-x64-msvc"
+      version: "^1.1.0"
+      role: native binding for vitest 4.x (BLOCKED, see below)
+      status: TRANSITIVE_BUT_BLOCKED
+      blocker: Windows App Control blocks .node binary load
+      evidence: docs/DEPENDENCY_AUDIT.md
+    - name: "@types/node"
+      version: "^22.19.20"
+      role: TypeScript types for Node
+    - name: tsx
+      version: "^4.21.0"
+      role: TS execution for dev/demo/smoke/verify scripts
+    - name: typescript
+      version: "^5.9.3"
+      role: tsc compiler
+    - name: vitest
+      version: "^3.2.4"
+      role: test runner
+      test_files: 17
+      test_cases: 118
+      status: PASS
+    - name: js-yaml
+      version: TBD (NEW IN v0.5.0; will be added by Phase 6)
+      role: YAML parser for canonical/ validators
+      note: dev-only
+  npm_audit:
+    production_deps: 0 known critical
+    dev_deps:
+      vitest_critical: >
+        1 (CVSS 9.8, UI server RCE) — NOT USED by lab (lab never starts
+        vitest --ui). Documented in docs/DEPENDENCY_AUDIT.md.
+    upgrade_path_blocked:
+      target: vitest@^4.1.8
+      reason: rolldown native binding blocked by Windows App Control
+      fallback: stay on vitest@^3.2.4
+  transports:
+    streamable_http:
+      protocol: MCP 2025-06-18
+      sdk_class: StreamableHTTPServerTransport
+      session_id_strategy: per-request randomUUID
+      cors_allowlist_default:
+        - https://chatgpt.com
+        - https://chat.openai.com
+      cors_extensible: CORS_ORIGIN env var (comma-separated)
+      auth: RFC 6750 Bearer + RFC 9728 PRM (challenge)
+      auth_optional: yes (DEMO-ONLY banner when MCP_AUTH_TOKEN unset)
+      smoke: PASS (npm run smoke)
+    stdio:
+      protocol: MCP 2025-06-18
+      sdk_class: StdioServerTransport
+      selection: MCP_TRANSPORT=stdio
+      auth: NONE (process boundary)
+      smoke: PASS (npm run demo:stdio)
+      use_cases:
+        - Claude Desktop
+        - Cursor
+        - Windsurf
+        - Cline (VS Code)
+        - OpenCode
+        - Aider
+        - Continue (VS Code / JetBrains)
+        - GitHub Copilot in VS Code
+  fs_allowlist:
+    read_paths:
+      - fixtures/sample-project.anotator8.json (via storage.ts)
+      - fixtures/near-real-project.anotator8.json (via storage.ts; generated)
+      - src/widget/index.html (via widget-resource.ts)
+      - src/widget/styles.css (via widget-resource.ts)
+      - src/widget/widget.ts (via widget-resource.ts)
+    write_paths: NONE
+    note: >
+      Verified by ripgrep in docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md:
+      only storage.ts and widget-resource.ts call readFile. No writeFile /
+      appendFile anywhere in src/server/**.
+  shell_exec_posture:
+    child_process: ZERO matches in src/server/**
+    exec: ZERO matches in src/server/**
+    spawn: ZERO matches in src/server/**
+    note: >
+      Verified by grep on 2026-06-07 (audit v1). Production runtime
+      cannot execute arbitrary shell commands. New validators (v0.5.0)
+      also avoid child_process / exec / spawn — they use pure Node +
+      js-yaml + fs only.
+  arb_command_execution:
+    status: NOT_PRESENT
+    confidence: HIGH
+    evidence: ripgrep on src/server/** shows zero matches for child_process|exec|spawn
+  script_inventory:
+    build: scripts verify build:clean + tsc
+    dev: tsx watch src/server/index.ts
+    start: node dist/server/index.js
+    test: vitest run (17 files, 118 cases)
+    gen_fixture: tsx scripts/gen-near-real-fixture.ts
+    gen_fixture_check: tsx gen:fixture + node sanity check
+    smoke: tsx scripts/smoke.ts (real HTTP roundtrip)
+    demo_oauth: tsx scripts/oauth-demo.ts (live PRM endpoint evidence)
+    demo_stdio: tsx scripts/stdio-smoke.ts (full MCP protocol roundtrip)
+    verify: tsx scripts/verify.ts (build + test + smoke + demo:stdio)
+    inspect: npx -y @modelcontextprotocol/inspector@latest
+    typecheck: tsc --noEmit
+  env_vars:
+    required: []
+    optional:
+      - MCP_TRANSPORT (http|stdio, default http)
+      - MCP_HOST (default 127.0.0.1)
+      - MCP_PORT (default 8787)
+      - MCP_AUTH_TOKEN (comma-separated; optional; if unset → DEMO-ONLY banner)
+      - CORS_ORIGIN (comma-separated additional origins)
+      - MCP_OAUTH_RESOURCE
+      - MCP_OAUTH_AUTHORIZATION_SERVERS
+      - MCP_OAUTH_SCOPES_SUPPORTED
+      - MCP_OAUTH_BEARER_METHODS
+      - MCP_OAUTH_RESOURCE_NAME
+      - MCP_OAUTH_RESOURCE_DOCUMENTATION
+      - MCP_OAUTH_CHALLENGE_INCLUDE_METADATA
+      - MCP_LAB_VERBOSE_REJECTIONS
+  health_endpoints:
+    health: "GET /health → {status: 'ok', version: '0.4.0'}"
+    ready: "GET /ready → {status: 'ready', version: '0.4.0', sessions: N}"
+  process_model:
+    http_mode: one HTTP server + Map<sessionId, {transport, server}>
+    stdio_mode: one StdioServerTransport
+    shutdown_handlers: SIGINT, SIGTERM (http only)
+  reverse_proxy:
+    required_for_production: YES
+    options:
+      - nginx + certbot (production, permanent)
+      - cloudflared (ephemeral or owned domain)
+      - ngrok (ephemeral, free tier)
+      - tunnel-client (OpenAI-managed)
+    rate_limiting: NOT IMPLEMENTED in lab (must be at proxy)
+    note: GAP G-06
+  known_risks:
+    - id: R-RT-01
+      risk: vitest 4.x blocked by Windows App Control
+      impact: devDep upgrade only; production runtime not affected
+      mitigation: stay on vitest 3.2.4; document in DEPENDENCY_AUDIT.md
+      evidence: docs/DEPENDENCY_AUDIT.md
+    - id: R-RT-02
+      risk: MCP SDK 1.29.0 + ext-apps 1.7.4 recursion bug
+      impact: non-fatal; captured to audit log
+      mitigation: unhandledRejection handler in app.ts
+      evidence: src/server/app.ts:22-41, tests/unit/rejection-capture.test.ts
+    - id: R-RT-03
+      risk: DEMO-ONLY mode = open server if exposed on public tunnel without MCP_AUTH_TOKEN
+      impact: any reachable client can call 8 read-only tools
+      mitigation: 7-line ASCII banner at startup
+      evidence: src/server/index.ts:65-76
+    - id: R-RT-04
+      risk: No rate limiting; no reverse proxy
+      impact: DoS possible if exposed publicly
+      mitigation: maintainer must deploy behind proxy before public exposure
+      evidence: GAP G-06
+  test_maturity:
+    test_files: 17
+    test_cases: 118
+    last_run: 2026-06-07
+    result: PASS
+    coverage_buckets:
+      unit:
+        - adapter.test.ts
+        - validators.test.ts
+        - schemas.test.ts
+        - youtube-patterns.test.ts
+        - rejection-capture.test.ts
+        - oauth/protected-resource-metadata.test.ts
+        - (1 more)
+      integration:
+        - http-mcp-protocol.test.ts
+        - tools.inspect-project.test.ts
+        - tools.validate-project.test.ts
+        - tools.find-annotations.test.ts
+        - auth-bypass.test.ts
+        - stdio-transport.test.ts
+        - oauth/protected-resource.test.ts
+      contract:
+        - mcp-tool-contracts.test.ts
+        - fixtures-compatibility.test.ts
+        - widget-bridge.test.ts
+        - near-real-fixture.test.ts
+    what_tests_dont_cover:
+      - Real ChatGPT Developer Mode (no paid account + tunnel)
+      - Load test at >10k annotations
+      - True concurrent session race conditions
+      - widget _meta.projectData prompt-injection scenarios
+  release_readiness:
+    current: 0.4.0
+    next_target: 0.5.0 (knowledge-base retrofit, no runtime change)
+    app_store_readiness: PLANNED (after OAuth 2.1 AS + golden fixture)
+    production_readiness: NEEDS_OAUTH_2_1_AS + reverse proxy + privacy redaction
+  source_quality:
+    repo_evidence: LIVE (src/** read-only inspected for this record)
+    runtime_evidence: LIVE (npm run verify last run 2026-06-07, 4/4 PASS)
+    official_doc_evidence: LOCATOR_ONLY (12 URLs, none CAPTURED_HASHED)
+  exact_vehicle_specificity:
+    note: >
+      "Exact product" specificity is HIGH for the runtime layer:
+      every dep, every env var, every transport, every script is
+      directly observed in package.json + src/** + scripts/**.
+    confidence: HIGH
+  known:
+    - Node 24.13.0
+    - 3 production deps, all 0 known vulnerabilities
+    - vitest 3.2.4 (devDep), 1 critical in UI server not used
+    - 2 transports: Streamable HTTP (default) + stdio (opt-in)
+    - 9 env vars (all optional)
+    - 0 write paths in src/server/**
+    - 0 child_process / exec / spawn in src/server/**
+    - 1 health endpoint + 1 ready endpoint
+    - 118/118 tests PASS
+  unknown:
+    - vitest 4.x upgrade window (depends on Windows policy)
+    - MCP SDK 1.30+ release date
+    - Anotator8 v25+ schema changes
+  not_proven:
+    - Production-grade load (10k+ not tested)
+    - Real ChatGPT e2e (not run on this host)
+  contradictions:
+    - None at runtime layer (deterministic from package.json)
+  assumptions:
+    - This record reflects lab HEAD = 42906e1 on branch main, clean tree
+    - No pending uncommitted changes (untracked: docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md only)
+  allowed_next_steps:
+    - Add js-yaml devDep (v0.5.0, Phase 6)
+    - Add validate:canonical + validate:truth-passport scripts
+    - Extend verify.ts to include validator steps
+  forbidden_shortcuts:
+    - Add a production dep that ships shell exec
+    - Add a child_process / exec / spawn call in src/server/**
+    - Loosen the FS allowlist without explicit maintainer approval
+  required_artifacts_to_upgrade:
+    - From PASS-118 to PASS-180: add 5x discovery_lead PoC tests
+    - From STREAMABLE-HTTP-ONLY to ALSO-STDIO: already done (v0.4.0)
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07

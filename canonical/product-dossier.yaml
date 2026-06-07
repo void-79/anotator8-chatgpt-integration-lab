@@ -1,0 +1,337 @@
+product_dossier:
+  object_id: product-dossier-anotator8-v24-lab-v04
+  object_type: PRODUCT_DOSSIER
+  title: Anotator8 v24.0.0 + Anotator8×ChatGPT Integration Lab v0.4.0
+  generated_at: 2026-06-07
+  reviewer: Mavis (knowledge-base retrofit run)
+  source_of_truth: canonical/active-canonical-index.yaml
+  oem:
+    name: Anotator8 team
+    repo_path: C:\Anotator8
+    last_verified_clean: 2026-06-07
+    git_status: "pre-existing modifications only; zero chatgpt/openai/mcp files in src/ (verified by ripgrep)"
+  brand_subbrand:
+    product_name: Anotator8 (Anatator)
+    product_aliases:
+      - Anatator
+      - Anotator8 PWA
+    lab_name: Anotator8 ChatGPT Integration Lab
+  platform:
+    lab_repo: C:\anotator8-chatgpt-integration-lab
+    old_prototype: C:\chat-gpt-mcp-app
+    branch: main
+    last_commit: "42906e1 docs(quickstart): add QUICKSTART.md + npm run verify"
+    working_tree: "CLEAN (untracked: docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md only)"
+  model:
+    product: Anotator8 v24.0.0
+    product_package_json: C:\Anotator8\package.json (line 3)
+    stack:
+      frontend: React 19 + Vite
+      backend: FastAPI
+      canvas: Fabric
+      state: Zustand
+      crdt: Loro CRDT (v24.0 GA)
+    shipped_tools:
+      - box
+      - ellipse
+      - arrow
+    broader_enum_present: true (UDMNode lines 28-47)
+  lab_version:
+    current: 0.4.0
+    package_json: C:\anotator8-chatgpt-integration-lab\package.json (line 3)
+    history:
+      - 0.1.0 (Express, 29 tests)
+      - 0.2.0 (TypeScript, 29 tests, restructure)
+      - 0.2.1 (5 YouTube patterns, DEMO banner, bridge, 60 tests)
+      - 0.3.0 (RFC 9728 PRM, 112 tests, Apps-bridge primary)
+      - 0.4.0 (stdio transport, 118 tests, universal-MCP foundation)
+  market:
+    type: internal-demo (not commercial)
+    app_store_submission: PLANNED (see docs/CHATGPT_APP_STORE.md)
+    public_listing: false
+  year_trim_software:
+    product_version: 24.0.0
+    lab_version: 0.4.0
+    mcp_sdk_version: 1.29.0
+    ext_apps_version: 1.7.4
+    node_version: 24.13.0
+    typescript_version: 5.9.3
+    zod_version: 3.25.76
+    vitest_version: 3.2.4
+  vin_scope:
+    note: "N/A (not a vehicle). Mapped to: project_file_scope"
+    project_file_path_naming:
+      product: '".anatator.json" or ".anatator" (ZIP)'
+      lab_fixture: '".anotator8.json" (intentionally renamed; do not change)'
+    redaction_status: lab fixture is synthetic + near-real generator; not real export
+  owner_manual_version:
+    note: "N/A (no consumer hardware manual). Mapped to: OFFICIAL_DOC_REFERENCE"
+    openai_apps_sdk_quickstart: 2026-01-26
+    mcp_spec: 2025-06-18
+    rfc_9728: 2025-04 (April 2025)
+    rfc_6750: 2012-10 (October 2012)
+  official_page_snapshot:
+    note: >
+      No public product page for the lab. Product page (if any) is at Anotator8 origin.
+    locator_status: NOT_APPLICABLE
+  brochure_snapshot:
+    note: NOT_APPLICABLE
+  user_visible_about_screen:
+    note: lab is server-side; no about screen. Maintainer can add /health + /ready endpoints.
+    health_endpoint: "GET /health → {status: 'ok', version: '0.4.0'}"
+    ready_endpoint: "GET /ready → {status: 'ready', version: '0.4.0', sessions: N}"
+  user_visible_app_list:
+    source: src/server/app.ts (createMcpServer)
+    tools:
+      - list_capabilities
+      - inspect_project
+      - validate_project
+      - summarize_annotations
+      - find_annotations
+      - suggest_labels
+      - create_review_plan
+      - export_chatgpt_report
+    resources:
+      - ui://anotator8/review-widget.html
+    prompts:
+      - review_anotator8_project
+  user_visible_legal_version_screen:
+    note: >
+      No legal version screen. The lab README has the MIT-style license of the parent
+      product (Anotator8). Apps SDK requires a privacy policy URL for App Store; lab
+      does not ship one (GAP G-19).
+  consumer_feature_test_results:
+    test_files: 17
+    test_cases: 118
+    last_run: 2026-06-07
+    result: PASS
+    evidence_path: tests/ (vitest 3.2.4)
+  privacy_redaction_done:
+    fixture_redaction: YES (synthetic data; no real PII)
+    project_data_in_widget: HIDDEN_METADATA_ONLY (_meta.projectData; partial redaction)
+    ferpa_coppa_gdpr_fields_preserved: true (opaque, not exposed as data)
+  consent_scope:
+    current: TOOL_LEVEL (caller explicitly passes projectData or fixtureId)
+    production_intent: SCOPE_LEVEL (per OAuth 2.1 scope, deferred)
+  does_not_prove:
+    - The lab is production-ready for student/customer data (OAuth 2.1 AS missing).
+    - The lab is verified end-to-end in real ChatGPT (not run on this host).
+    - The lab handles >10k annotations at production load (not load-tested).
+    - The lab preserves all Anotator8 v25+ schema fields (adapter is robust to unknown top-level fields, but validated only against 24.0.0 evidence).
+    - The lab is privacy-safe by default (projectData is passed to the LLM unless redacted by maintainer).
+  forbidden_artifacts:
+    - service-menu / hidden-debug paths as research method
+    - firmware dump / extraction
+    - live bus capture / injection
+    - private key / credential / token extraction
+    - unredacted VIN / account / location
+    - diagnostic write/coding/adaptation commands
+  intake:
+    queue:
+      - id: real-chatgpt-developer-mode-e2e
+        status: UNTESTED
+        required_for: any "production" or "App Store" claim
+        artifact_needed: smoke log + screenshot + audio of full flow
+      - id: golden-anotator8-fixture
+        status: SYNTHETIC_ONLY
+        required_for: any "real Anotator8 export" claim
+        artifact_needed: redacted .anatator.json exported from Anotator8 UI
+      - id: real-anotator8-with-redaction
+        status: BLOCKED (depends on golden-fixture + privacy redaction pipeline)
+        required_for: any "lab handles real student data" claim
+  consumer_features:
+    - Read-only review of Anotator8 project files
+    - 8 MCP tools, 1 prompt, 1 widget resource
+    - Two transport modes: Streamable HTTP and stdio
+    - Bearer + RFC 9728 PRM foundation
+    - Widget with primary Apps-bridge (2026-01-26) + legacy fallback
+  hardware:
+    note: >
+      Mapped from "Hardware Layer" (SDV analog) to "Runtime & Dependency Layer".
+      The lab runs on Node 24.13.0; production deploys need a reverse proxy.
+    node: 24.13.0
+    package_manager: npm
+    build_output: dist/server/index.js
+    required_runtime_files:
+      - dist/server/index.js
+      - dist/server/**/*.js
+  os_kernel_platform:
+    note: >
+      Mapped from "OS / Kernel / HAL / Middleware" (SDV analog).
+      The lab is a Node process. The protocol layer is MCP 2025-06-18.
+    protocol_version: 2025-06-18
+    transport_streamable_http: default
+    transport_stdio: opt-in via MCP_TRANSPORT=stdio
+    apps_sdk_bridge_version: 2026-01-26 (primary)
+    apps_sdk_legacy: window.openai.callTool (fallback)
+  app_model:
+    note: >
+      Server-side MCP app. Widget runs in ChatGPT iframe (parent-side).
+      No native app. No mobile companion (planned, see CHATGPT_APP_SETUP.md).
+    server: Node 24 + TypeScript 5.9 + Zod 3.25
+    widget: TS + CSS + HTML in src/widget/ (177 lines widget.ts)
+    native_app: false
+    mobile_companion: false
+  connectivity:
+    streamable_http:
+      default_port: 8787
+      cors_allowlist_default:
+        - https://chatgpt.com
+        - https://chat.openai.com
+      cors_extensible: CORS_ORIGIN env var (comma-separated)
+    stdio:
+      use: local MCP clients (Claude Desktop, Cursor, Windsurf, Cline, OpenCode, Aider, Continue, Copilot)
+      env_required: MCP_TRANSPORT=stdio
+    tunnel_options:
+      - cloudflared (recommended, free)
+      - ngrok (free tier)
+      - tunnel-client (OpenAI-managed)
+      - VPS + nginx + certbot (production)
+  telemetry:
+    note: >
+      "Telemetry" в SDV-смысле — нет. В lab-смысле — audit log на stderr.
+    audit: src/server/audit.ts (stderr JSON lines, Bearer redaction, 500-char cap)
+    redaction: Bearer tokens + MCP_AUTH_TOKEN values + raw error paths
+    retention: not configured (no disk persistence by default)
+  privacy:
+    ferpa_coppa_gdpr_preserved: true (opaque, not interpreted)
+    project_data_to_llm: TRUE (caller is responsible for redaction)
+    project_data_in_widget: HIDDEN (_meta.projectData; widget never displays it)
+    video_bytes: NEVER READ, NEVER UPLOADED, NEVER DECODED
+  safety:
+    note: >
+      "Safety" в automotive-смысле — N/A (не safety-critical ECU). В security-смысле —
+      см. canonical/threat-record.yaml и docs/SECURITY.md.
+    shell_exec: NONE (zero child_process/exec/spawn in src/server/**)
+    fs_write: NONE
+    arb_command_execution: NONE
+    write_tools: NONE (intentional, see decision-no-write-tool-policy.yaml)
+  cybersecurity:
+    threat_model: canonical/threat-record.yaml
+    assurance_case: canonical/assurance-case-record.yaml
+    auth:
+      bearer_with_token: MCP_AUTH_TOKEN env var (comma-separated, optional)
+      bearer_challenge: RFC 6750 WWW-Authenticate with RFC 9728 §5.1 resource_metadata
+      oauth_2_1_as: NOT_IMPLEMENTED (GAP G-01)
+    input_validation: zod schemas for all 8 tools
+    output_sanitization: structuredContent + IntegrationError shape; no raw error paths leaked
+  tests:
+    total: 118
+    files: 17
+    breakdown:
+      unit: 7
+      integration: 6
+      contract: 4
+    runner: vitest 3.2.4
+    result: PASS (2026-06-07)
+  release:
+    current_version: 0.4.0
+    next_target: 0.5.0 (knowledge-base retrofit, no runtime change)
+    app_store_submission: PLANNED (after OAuth 2.1 AS + golden fixture)
+  source_quality:
+    repo_evidence: LIVE (C:\Anotator8 src/**, C:\anotator8-chatgpt-integration-lab src/**)
+    prototype_evidence: LIVE (C:\chat-gpt-mcp-app, read-only)
+    official_doc_evidence: LOCATOR_ONLY (12 URLs, none CAPTURED_HASHED yet)
+    runtime_evidence: LIVE (build/test/smoke/demo:stdio, all PASS)
+    inference_evidence: documented in REPORT.md § Architecture
+    unclear_evidence: list in canonical/unknown-unknown.yaml
+  exact_vehicle_specificity:
+    note: >
+      "Exact vehicle" mapped to "exact product". The lab is verified against
+      Anotator8 v24.0.0 REPO_EVIDENCE. It is NOT verified against any real
+      student or customer Anotator8 export (GAP G-04).
+    product_version_match: Anotator8 v24.0.0
+    schema_match: KNOWN_PROJECT_FIELDS + unknownFields preservation
+    upgrade_robustness: adapter preserves unknown top-level fields; validator
+      accepts v25+ unknown fields with warning, not error
+  known:
+    - MCP protocol version is 2025-06-18
+    - Apps SDK bridge version is 2026-01-26
+    - 8 read-only tools, all with Zod I/O schemas
+    - 1 prompt: review_anotator8_project
+    - 1 widget resource: ui://anotator8/review-widget.html
+    - "All tools are readOnlyHint: true, destructiveHint: false, openWorldHint: false"
+    - Tests: 118/118 PASS across 17 files
+    - Smoke + demo:stdio PASS
+    - RFC 9728 PRM foundation shipped (v0.3.0)
+    - Streamable HTTP + stdio transports
+    - Zero shell exec, zero FS write, allowlisted FS read
+    - DEMO-ONLY banner when MCP_AUTH_TOKEN unset
+    - MCP SDK 1.29.0 + ext-apps 1.7.4 recursion bug captured to audit log
+  unknown:
+    - Whether the lab works end-to-end in real ChatGPT (no paid account + tunnel on this host)
+    - Whether OAuth 2.1 AS will use the same lab shape or a separate process
+    - Whether the widget _meta.projectData will be removed or kept in production
+    - Whether Anotator8 v25+ will break any KNOWN_PROJECT_FIELDS assumption
+  not_proven:
+    - Production-ready for student data (OAuth 2.1 AS missing)
+    - Public App Store ready (privacy policy + screenshots + support contact missing; OAuth missing)
+    - Real ChatGPT e2e verified (no live test on this host)
+    - 10k+ annotation load tested (no load test)
+    - Golden fixture from real Anotator8 export (fixture is synthetic + near-real generator)
+  assumptions:
+    - Anotator8 v24.0.0 is the current production version
+    - lab branch main is the active development branch
+    - tests/ + src/ are not modified in this v0.5.0 release
+    - Legacy docs (QA_REPORT, BUILD_REPORT, FINAL_REPORT) remain unchanged
+  contradicted_or_conflicting:
+    - >
+      REPORT.md body section "What This Session Added (0.2.1 → 0.3.0)" describes a 0.2.1→0.3.0
+      transition (112/15 numbers) while the header says v0.4.0/118/17. This is intentional —
+      the body is a historical record of phase changes, the header is the current snapshot.
+      v0.5.0 release does NOT resolve this; legacy_report_not_overwritten is the rule.
+  allowed_next_steps:
+    - Add OAuth 2.1 AS endpoints (token issuance, introspection, JWKS, DCR)
+    - Add reverse proxy (nginx, cloudflared with rate limiting)
+    - Add golden Anotator8 export fixture
+    - Add load test (10k+ annotations)
+    - Add live ChatGPT Developer Mode e2e verification (needs paid account + tunnel)
+    - Add per-tool scope enforcement (after OAuth 2.1 AS)
+    - Add write tools (propose_annotation_changes, apply_annotation_patch) — AFTER OAuth 2.1 AS
+    - Migrate from `as never` casts in registerAppTool when SDK fixes the typed callback
+  forbidden_shortcuts:
+    - Claiming "production ready" without OAuth 2.1 AS
+    - Claiming "ChatGPT e2e verified" without live test
+    - Bypassing MCP_AUTH_TOKEN check on public tunnel
+    - Reading real Anotator8 backend without privacy redaction pipeline
+    - Adding write tools without OAuth 2.1 AS + reversal model
+    - Replacing synthetic fixture with real export without consent
+    - Claiming 10k+ annotation support without load test
+  required_artifacts_to_upgrade:
+    - From RUNTIME_VERIFIED → RUNTIME_E2E: live ChatGPT Developer Mode screenshot/log
+    - From SYNTHETIC → GOLDEN: real Anotator8 export + redaction pipeline
+    - From DEMO → OAUTH_2_1: AS implementation + JWKS + DCR + scope vocabulary
+    - From UNTESTED → LOAD_TESTED: 10k annotation benchmark report
+  related_sources:
+    - REPORT.md (current authoritative runtime report)
+    - docs/ARCHITECTURE.md
+    - docs/MCP_COMPATIBILITY.md
+    - docs/PRODUCT_SURFACE.md
+    - docs/PROTOTYPE_AUDIT.md
+    - docs/SECURITY.md
+    - docs/TOOL_CONTRACTS.md
+    - docs/PORTING_TO_ANOTATOR8.md
+    - docs/research/OFFICIAL_DOCS_RESEARCH.md
+    - docs/DEPENDENCY_AUDIT.md
+    - docs/CHATGPT_APP_SETUP.md
+    - docs/CHATGPT_APP_STORE.md
+    - docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md
+  related_gaps:
+    - G-01 (OAuth 2.1 AS)
+    - G-02 (ChatGPT e2e)
+    - G-04 (golden fixture)
+    - G-05 (load test)
+    - G-06 (reverse proxy)
+    - G-15 (MCP_AUTH_TOKEN unset = open server)
+    - G-16 (real Anotator8 + privacy)
+  related_analogs:
+    - MCP Inspector (analog of Postman for MCP)
+    - Cloudflare Tunnel (analog of ngrok for HTTPS exposure)
+    - Official MCP examples (analog of "hello world" for protocol conformance)
+  related_methods:
+    - adapter-first (preserve unknown fields)
+    - evidence-classified (REPO/PROTOTYPE/OFFICIAL_DOC/RUNTIME/INFERENCE/UNCLEAR)
+    - no-mutation (read-only tools, no shell, no FS write)
+    - allowlist-FS (only fixtures + widget source)
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07 (quarterly; or sooner on SDK / Apps SDK / RFC change)

@@ -1,0 +1,133 @@
+tool_record:
+  object_id: tool-inspect-project
+  object_type: TOOL_RECORD
+  title: inspect_project — normalize Anotator8 project and return stats
+  generated_at: 2026-06-07
+  source_of_truth: src/server/tools/inspect-project.ts
+  purpose: >
+    Нормализует переданный Anotator8 project JSON (или allowlisted fixture),
+    возвращает version, source metadata, annotation counts, subtitle counts,
+    timeline health, warnings, unsupported fields. Не интерпретирует video
+    bytes. Не интерпретирует sync/integrity keys. Не интерпретирует
+    education/privacy flags (preserved opaque).
+  identity:
+    name: inspect_project
+    title: "Inspect Anotator8 Project"
+    description: "Normalize an Anotator8 project and return source metadata, annotation counts, subtitles, timeline health, warnings, and unsupported fields."
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      openWorldHint: false
+  input_schema:
+    shape: object
+    fields:
+      - name: projectData
+        type: object
+        optional: true
+        description: Inline project JSON. Mutually exclusive with fixtureId.
+      - name: fixtureId
+        type: string
+        optional: true
+        description: Allowlisted fixture id (e.g. "sample-project"). Mutually exclusive with projectData.
+      - name: projectId
+        type: string
+        optional: true
+        description: Caller-supplied identifier for tracking in audit log.
+  output_schema:
+    shape: object
+    fields:
+      - version: string
+      - source: object (kind, videoId|objectUrl|...)
+      - stats: object (annotationCount, annotationTypes, shapeTypes, subtitleTrackCount, subtitleCueCount, timelineTrackCount, warningCount, unknownFieldCount)
+      - warnings: array of objects (code, message, severity, path?)
+      - unsupportedFields: array of strings
+  errors:
+    codes: [missing_field, invalid_input, too_large_input, internal_error]
+    size_limit: 10MB (Anotator8Adapter.parse)
+    never_leaked: [absolute paths, raw stack traces]
+  data_used:
+    input: projectData (Anotator8 v24.0.0 schema) or fixtureId (allowlisted)
+    output: normalized summary
+    bytes_read: 0 (never reads video, never reads arbitrary FS)
+  access_boundary:
+    scope: caller-supplied data only
+    requires_oauth: false (HTTP layer)
+    requires_consent: caller-supplied (lab does not collect consent)
+    reads_user_files: false (fixture allowlist only)
+  vehicle_claim_ceiling: PARTIAL_EXACT_MARKET (Anotator8 v24.0.0 evidence; v25+ unknown fields preserved)
+  exact_vehicle_specificity: PARTIAL_EXACT_MARKET
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY + FIELD_READ_ONLY
+  release_readiness: app_review_ready
+  evidence:
+    repo_evidence: src/server/tools/inspect-project.ts, src/server/anotator8-adapter.ts
+    runtime_evidence: tests/integration/tools.inspect-project.test.ts, tests/integration/http-mcp-protocol.test.ts, npm run smoke
+    official_doc_evidence: OFF-MCP-SPEC, OFF-APPS-SDK-TEST
+    prototype_evidence: none
+    inference: >
+      "PARTIAL_EXACT_MARKET" ceiling is set because the adapter
+      preserves unknown top-level fields and emits warnings for unknown
+      annotation types / shapes, but is validated only against
+      Anotator8 v24.0.0 REPO_EVIDENCE.
+    unclear: Anotator8 v25+ compatibility (covered by GAP G-04 + UU-02)
+  evidence_status: CONFIRMED_FOR_PLATFORM + PARTIAL_EXACT_MARKET
+  decision_refs: [decision-no-write-tool-policy, decision-no-shell-exec-policy]
+  privacy:
+    reads_pii: POSSIBLE (caller-supplied; lab does not interpret)
+    writes_pii: false
+    logs_pii: false
+    ferpa_coppa_gdpr_relevant: POSSIBLE (preserves fields as opaque; GAP G-16)
+  safety:
+    shell_exec: no
+    fs_write: no
+    arb_command: no
+  cybersecurity:
+    input_validation: Zod (projectData OR fixtureId, mutually exclusive)
+    output_sanitization: structuredContent + IntegrationError
+    auth_required: yes (HTTP layer)
+  tests:
+    files:
+      - tests/integration/tools.inspect-project.test.ts
+      - tests/integration/http-mcp-protocol.test.ts
+    test_cases: ~5
+    pass: true
+  release:
+    documented_in: docs/CHATGPT_APP_STORE.md § 2.2
+    sample_invocation: "Inspect fixture sample-project and tell me what's in it."
+    screenshot_prompt: "A widget panel with 3 metrics (annotations / subtitle cues / warnings), then a Warnings list with 1-3 entries."
+  known:
+    - Adapter mirrors 5-shape enum (rect/circle/polygon/arrow/freehand)
+    - Adapter mirrors 5 YouTube URL patterns
+    - Adapter preserves unknown top-level fields in `unknownFields`
+    - 10MB hard cap; over → `too_large_input`
+    - Unknown annotation type → warning, not error
+    - Unknown shape → warning, not error
+  unknown:
+    - Whether v25+ introduces new required fields that trigger false negatives
+  not_proven:
+    - Lab handles real student data with privacy redaction (GAP G-16)
+    - Lab handles 10k+ annotations at production load (GAP G-05)
+  assumptions:
+    - fixtureId is allowlisted (sample-project, near-real-project)
+    - projectData is Anotator8 v24.0.0 schema (or compatible)
+  contradictions: none
+  allowed_next_steps:
+    - Add privacy redaction pipeline (post G-16)
+    - Add per-tool scope (post G-01)
+    - Add v25+ adapter extension
+  forbidden_shortcuts:
+    - Claiming this tool can inspect video bytes (it cannot)
+    - Claiming this tool is privacy-safe by default
+  related_sources:
+    - src/server/anotator8-adapter.ts
+    - docs/PRODUCT_SURFACE.md
+    - docs/PORTING_TO_ANOTATOR8.md
+  related_gaps: [G-04, G-05, G-16, UU-02]
+  related_analogs:
+    - jq (similar normalized output)
+    - jsonschema (similar validation)
+  related_methods:
+    - adapter-first
+    - unknownFields preservation
+  related_truth_passport: truth-passport/tool-inspect-project.yaml
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07

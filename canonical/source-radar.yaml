@@ -1,0 +1,378 @@
+source_radar:
+  object_id: source-radar-v0.5.0
+  object_type: SOURCE_RADAR
+  title: Source Radar — все источники lab v0.4.0 / knowledge base v0.5.0
+  generated_at: 2026-06-07
+  purpose: >
+    Машино-читаемая карта всех источников с snapshot_state, staleness_trigger,
+    refresh_due, proves, does_not_prove. Этот файл — canonical, не legacy.
+    Подробная narrative-карта — в index/SOURCE_MAP.md.
+  tiers:
+    - id: TIER-1-OFFICIAL-SPEC
+      description: OFFICIAL_SPEC, authoritative spec docs
+      evidence_weight: HIGH (but LOCATOR_ONLY until captured)
+      count: 12
+      entries:
+        - id: OFF-MCP-2025-06-18
+          title: MCP Specification 2025-06-18
+          url: https://modelcontextprotocol.io/specification/2025-06-18/
+          locator_status: LOCATOR_ONLY
+          snapshot_state: MISSING_CAPTURE
+          captured_artifact_id: null
+          sha256: null
+          reviewer: null
+          reviewed_at: null
+          proves:
+            - "Lab declares protocolVersion 2025-06-18 in initialize (smoke verified)"
+            - "Lab tools/resources/prompts shape matches 2025-06-18 spec"
+          does_not_prove:
+            - "Lab is a 2025-06-18 spec-compliant server in production"
+            - "All clients that speak 2025-06-18 will accept the lab"
+          staleness_trigger: new MCP spec release
+          refresh_due: 2026-12-07 (next MCP spec window)
+        - id: OFF-APPS-SDK-QS
+          title: OpenAI Apps SDK Quickstart (2026-01-26)
+          url: https://developers.openai.com/apps-sdk/quickstart
+          locator_status: LOCATOR_ONLY
+          snapshot_state: MISSING_CAPTURE
+          proves:
+            - "Lab uses BRIDGE_PROTOCOL_VERSION = '2026-01-26'"
+            - "Widget uses ui/initialize + tools/call as primary"
+          does_not_prove:
+            - "Lab is Apps SDK 2026-01-26 fully conformant"
+            - "Production ChatGPT speaks 2026-01-26"
+          staleness_trigger: Apps SDK version bump
+          refresh_due: 2026-09-07
+        - id: OFF-APPS-SDK-REF
+          title: OpenAI Apps SDK Reference
+          url: https://developers.openai.com/apps-sdk/reference
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab widget still feature-detects window.openai.callTool"
+            - "Lab declares Zod output schemas for all 8 tools"
+          does_not_prove:
+            - "All Apps SDK 1.x APIs are correct"
+          staleness_trigger: Apps SDK version bump
+          refresh_due: 2026-09-07
+        - id: OFF-APPS-SDK-AUTH
+          title: OpenAI Apps SDK Auth
+          url: https://developers.openai.com/apps-sdk/build/auth
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab has DEMO-ONLY mode + Bearer auth + RFC 9728 PRM foundation"
+          does_not_prove:
+            - "Lab meets Apps SDK production auth requirements"
+            - "Bearer auth is sufficient for App Store review"
+          staleness_trigger: Apps SDK version bump
+          refresh_due: 2026-09-07
+        - id: OFF-APPS-SDK-SEC
+          title: OpenAI Apps SDK Security & Privacy
+          url: https://developers.openai.com/apps-sdk/guides/security-privacy
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab has CSP with no external connectDomains/resourceDomains"
+            - "Lab has structured error shape (no raw paths leaked)"
+            - "Lab redacts Bearer + MCP_AUTH_TOKEN in audit log"
+          does_not_prove:
+            - "Lab meets all Apps SDK security requirements"
+          staleness_trigger: Apps SDK version bump
+          refresh_due: 2026-09-07
+        - id: OFF-APPS-SDK-TEST
+          title: OpenAI Apps SDK Testing
+          url: https://developers.openai.com/apps-sdk/deploy/testing
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab has 17 test files / 118 cases / 4 verify steps"
+            - "Lab has MCP Inspector wrapper (`npm run inspect`)"
+          does_not_prove:
+            - "Lab passes all Apps SDK testing requirements"
+          staleness_trigger: Apps SDK version bump
+          refresh_due: 2026-09-07
+        - id: OFF-APPS-SDK-SUB
+          title: OpenAI Apps SDK Submission
+          url: https://developers.openai.com/apps-sdk/deploy/submission
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Maintainer has a runbook (docs/CHATGPT_APP_STORE.md)"
+          does_not_prove:
+            - "Lab is App Store ready"
+          staleness_trigger: Apps SDK version bump
+          refresh_due: 2026-09-07
+        - id: OFF-APPS-SDK-GUIDE
+          title: OpenAI Apps SDK Submission Guidelines
+          url: https://developers.openai.com/apps-sdk/app-submission-guidelines
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab has 8 readOnly tools (good starting position)"
+            - "Lab does NOT use frameDomains (sidesteps extra iframe review)"
+          does_not_prove:
+            - "Lab is App Store approved"
+          staleness_trigger: Apps SDK version bump
+          refresh_due: 2026-09-07
+        - id: OFF-RFC-9728
+          title: OAuth 2.0 Protected Resource Metadata (RFC 9728)
+          url: https://www.rfc-editor.org/rfc/rfc9728
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab serves /.well-known/oauth-protected-resource[/<path>] (RFC 9728 §3.1)"
+            - "Lab includes resource_metadata=... in 401/403 challenge (§5.1)"
+          does_not_prove:
+            - "Lab is a full RFC 9728 implementation"
+            - "Lab is OAuth 2.1 ready (AS is missing, see G-01)"
+          staleness_trigger: errata
+          refresh_due: 2027-04 (5-year RFC review window)
+        - id: OFF-RFC-6750
+          title: OAuth 2.0 Bearer Token Usage (RFC 6750)
+          url: https://www.rfc-editor.org/rfc/rfc6750
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab uses Bearer scheme in Authorization header"
+            - "Lab uses WWW-Authenticate: Bearer realm=..., error=... on 401/403"
+          does_not_prove:
+            - "Lab supports all RFC 6750 token formats (body/query not used)"
+            - "Lab is OAuth 2.1 (it is not; see G-01)"
+          staleness_trigger: errata
+          refresh_due: 2027-10
+        - id: OFF-RFC-8414
+          title: OAuth 2.0 Authorization Server Metadata (RFC 8414)
+          url: https://www.rfc-editor.org/rfc/rfc8414
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab has no AS metadata today; this RFC is for the future"
+          does_not_prove:
+            - "Lab has an AS"
+            - "Lab is RFC 8414 conformant"
+          staleness_trigger: errata
+          refresh_due: 2027-04
+        - id: OFF-MCP-ARCH
+          title: MCP Architecture overview
+          url: https://modelcontextprotocol.io/docs/concepts/architecture
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "Lab role split (server / client / host) follows MCP architecture"
+          does_not_prove:
+            - "Lab matches the latest architecture diagrams"
+          staleness_trigger: MCP spec bump
+          refresh_due: 2026-12-07
+    - id: TIER-2-PRIMARY
+      description: REPO evidence from Anotator8, lab, prototype
+      evidence_weight: HIGH (live)
+      count: 7
+      entries:
+        - id: REPO-AN8
+          title: Anotator8 v24.0.0 source
+          path: C:\Anotator8
+          locator_status: LIVE
+          snapshot_state: LIVE (REPO_EVIDENCE)
+          proves:
+            - "Anotator8 product version is 24.0.0"
+            - "5-shape enum (rect/circle/polygon/arrow/freehand)"
+            - "5-pattern YouTube URL inference"
+            - "Subtitle locale enum (en/ru/kk)"
+            - "Data residency enum (us-east/eu-central/us-west/kz-central)"
+            - "No chatgpt/openai/mcp files in src/ (clean slate)"
+          does_not_prove:
+            - "Anotator8 v25+ matches the same shape"
+          staleness_trigger: Anotator8 version bump
+          refresh_due: on next Anotator8 release
+        - id: REPO-LAB
+          title: Anotator8 ChatGPT Integration Lab v0.4.0
+          path: C:\anotator8-chatgpt-integration-lab
+          locator_status: LIVE
+          snapshot_state: LIVE (REPO_EVIDENCE; HEAD = 42906e1, clean)
+          proves:
+            - "Lab has 8 read-only tools, 1 prompt, 1 widget resource"
+            - "Lab uses MCP 2025-06-18 + Apps SDK 2026-01-26"
+            - "Lab has RFC 9728 PRM + RFC 6750 Bearer + CORS allowlist"
+            - "Lab has zero shell exec, zero FS write, allowlisted FS read"
+          does_not_prove:
+            - "Lab is production-ready"
+          staleness_trigger: lab commit
+          refresh_due: on next commit
+        - id: REPO-LAB-AUDIT-V1
+          title: Audit against Discovery-First Build Prompt v1
+          path: docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md
+          locator_status: LIVE (untracked)
+          snapshot_state: LIVE
+          proves:
+            - "16 sections of audit checklist coverage"
+            - "Verification command output (4/4 PASS)"
+            - "Honest remaining work list (8 items)"
+          does_not_prove:
+            - "Audit is current (it is, as of 2026-06-07)"
+            - "Audit covers new code added after 2026-06-07"
+          staleness_trigger: any lab change
+          refresh_due: on next commit
+        - id: PROTOTYPE-OLD
+          title: Old C:\chat-gpt-mcp-app Python FastMCP
+          path: C:\chat-gpt-mcp-app
+          locator_status: LIVE
+          proves:
+            - "Path allowlist pattern (PermissionGuard)"
+            - "READ_ONLY tool annotations pattern"
+            - "Bearer auth with env var pattern"
+            - "stderr audit log pattern"
+          does_not_prove:
+            - "Prototype is suitable for product (it is not; do not import)"
+          staleness_trigger: none (frozen reference)
+          refresh_due: N/A
+        - id: DOCS-LEGACY-BUILD
+          title: Stale docs/BUILD_REPORT.md
+          path: docs/BUILD_REPORT.md
+          locator_status: SUPERSEDED
+          snapshot_state: SUPERSEDED (header)
+          proves: nothing (header explicitly says SUPERSEDED)
+          does_not_prove:
+            - "Any current build/test/smoke numbers"
+        - id: DOCS-LEGACY-QA
+          title: Stale docs/QA_REPORT.md
+          path: docs/QA_REPORT.md
+          locator_status: SUPERSEDED
+          snapshot_state: SUPERSEDED
+          proves: nothing
+          does_not_prove: any current QA numbers
+        - id: DOCS-LEGACY-FINAL
+          title: docs/FINAL_REPORT.md
+          path: docs/FINAL_REPORT.md
+          locator_status: LIVE (historical)
+          snapshot_state: HISTORICAL
+          proves: history of v0.2.1 transition
+          does_not_prove: any current state
+    - id: TIER-3-RUNTIME
+      description: Build, test, smoke, demo, audit
+      evidence_weight: HIGH (live + reproducible)
+      count: 5
+      entries:
+        - id: RUNTIME-VERIFY
+          title: npm run verify output
+          source: scripts/verify.ts
+          locator_status: LIVE
+          snapshot_state: CAPTURED_UNHASHED (last run 2026-06-07, 4/4 PASS)
+          proves:
+            - "Build is clean (tsc, 0 errors)"
+            - "Tests are green (118/118 across 17 files)"
+            - "Smoke is green (real HTTP roundtrip)"
+            - "Stdio demo is green (full MCP protocol roundtrip)"
+          does_not_prove:
+            - "Real ChatGPT e2e (not run on this host)"
+          staleness_trigger: any lab change
+          refresh_due: on next commit
+        - id: RUNTIME-AUDIT
+          title: npm audit --omit=dev
+          source: npm
+          locator_status: LIVE
+          snapshot_state: CAPTURED_UNHASHED (2026-06-07)
+          proves:
+            - "Production deps have 0 known critical vulnerabilities"
+            - "vitest <4.1.0 has 1 critical (UI server RCE, not used)"
+          does_not_prove:
+            - "Future npm audit will be the same"
+          staleness_trigger: new GHSA advisory on @modelcontextprotocol/sdk or zod
+          refresh_due: on each CI run
+        - id: RUNTIME-INSPECTOR
+          title: MCP Inspector via npx
+          source: npx
+          locator_status: LIVE
+          snapshot_state: CAPTURED_UNHASHED
+          proves:
+            - "npm run inspect works on this host"
+          does_not_prove:
+            - "Inspector will keep working in the future (depends on npx registry)"
+          staleness_trigger: MCP Inspector version bump
+          refresh_due: 2026-12-07
+        - id: RUNTIME-CHATGPT-E2E
+          title: Live ChatGPT Developer Mode roundtrip
+          source: manual
+          locator_status: UNTESTED
+          snapshot_state: MISSING_CAPTURE
+          proves: nothing yet
+          does_not_prove:
+            - "Lab works in real ChatGPT"
+          staleness_trigger: needs paid account + tunnel
+          refresh_due: BLOCKED (see discovery-lead/real-chatgpt-developer-mode-e2e.yaml)
+        - id: RUNTIME-LOCAL-CLIENTS
+          title: Local stdio clients (Claude Desktop, Cursor, etc.)
+          source: manual
+          locator_status: UNTESTED
+          snapshot_state: MISSING_CAPTURE
+          proves:
+            - "Protocol is correct (verified via npm run demo:stdio)"
+          does_not_prove:
+            - "All 8 local clients work end-to-end"
+          staleness_trigger: maintainer wire-up
+          refresh_due: BLOCKED (no client install on this host)
+    - id: TIER-4-LEAD-ONLY
+      description: Community / forum / blog / security advisory
+      evidence_weight: LOW (lead, not proof)
+      count: 7
+      entries:
+        - id: LEAD-OPENAI-COMMUNITY
+          title: ChatGPT App Review Process Timelines
+          url: https://community.openai.com/t/app-review-process-timelines-for-chatgpt-app-store/1378947
+          locator_status: LOCATOR_ONLY
+          proves: nothing authoritative
+          does_not_prove: any App Store review SLA
+          use_case: docs/CHATGPT_APP_STORE.md § timeline expectations
+        - id: LEAD-REDDIT-MCP
+          title: "My experience submitting my first ChatGPT app (r/mcp)"
+          url: https://www.reddit.com/r/mcp/comments/1ps1sr5/
+          locator_status: LOCATOR_ONLY
+          use_case: docs/CHATGPT_APP_STORE.md § common rejection reasons
+        - id: LEAD-MEDIUM-CHATGPT-APP
+          title: "How to submit your app to ChatGPT and actually get it approved"
+          url: https://medium.com/techtrends-digest/how-to-submit-your-app-to-chatgpt-and-actually-get-it-approved-f3b0d4b2b91f
+          locator_status: LOCATOR_ONLY
+          use_case: docs/CHATGPT_APP_STORE.md § walkthrough
+        - id: LEAD-GHSA-VITEST
+          title: vitest UI server RCE GHSA-5xrq-8626-4rwp
+          url: https://github.com/advisories/GHSA-5xrq-8626-4rwp
+          locator_status: LOCATOR_ONLY
+          proves:
+            - "There is a known vitest UI server RCE"
+          does_not_prove:
+            - "Lab is affected (it is not; lab never starts vitest --ui)"
+          use_case: docs/DEPENDENCY_AUDIT.md (risk context only)
+        - id: LEAD-GHSA-VITE
+          title: vite path traversal GHSA-4w7w-66w2-5vf9
+          url: https://github.com/advisories/GHSA-4w7w-66w2-5vf9
+          use_case: docs/DEPENDENCY_AUDIT.md
+        - id: LEAD-GHSA-ESBUILD
+          title: esbuild dev server GHSA-67mh-4wv8-2f99
+          url: https://github.com/advisories/GHSA-67mh-4wv8-2f99
+          use_case: docs/DEPENDENCY_AUDIT.md
+        - id: LEAD-ROLLDOWN-ISSUE
+          title: rolldown Windows binding
+          url: https://github.com/rolldown/rolldown/issues
+          use_case: docs/DEPENDENCY_AUDIT.md
+  stats:
+    total_sources: 31
+    captured_hashed: 0
+    captured_unhashed: 5
+    live: 7
+    locator_only: 12
+    lead_only: 7
+    superseded: 2
+    missing_capture: 2
+  forward_work:
+    - >
+      Promote all 12 OFFICIAL_SPEC entries from LOCATOR_ONLY to CAPTURED_HASHED
+      by fetching each URL once, saving to canonical/sources/snapshots/ with
+      sha256. This is a one-day task; deferred to v0.6.0 to keep v0.5.0 focused
+      on schema + truth passports.
+    - >
+      Promote RUNTIME-CHATGPT-E2E from MISSING_CAPTURE to CAPTURED_UNHASHED
+      by completing the e2e flow (tunnel + ChatGPT + screenshot + log).
+    - >
+      Promote RUNTIME-LOCAL-CLIENTS from MISSING_CAPTURE to CAPTURED_UNHASHED
+      by wiring at least one local client (e.g. Claude Desktop or Cursor).
+  rules:
+    - id: url-not-evidence
+      rule: URL is locator only, not evidence.
+    - id: capture-or-locator
+      rule: snapshot_state is either CAPTURED_HASHED (with real sha256) or LOCATOR_ONLY. No fake hashes.
+    - id: web-search-not-evidence
+      rule: Web search result is not evidence.
+    - id: forum-not-evidence
+      rule: Forum / blog / video is LEAD_ONLY at best.
+    - id: ghsa-context-only
+      rule: Security advisory (GHSA) is risk context, not exploitation guidance.

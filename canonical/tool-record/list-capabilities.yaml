@@ -1,0 +1,102 @@
+tool_record:
+  object_id: tool-list-capabilities
+  object_type: TOOL_RECORD
+  title: list_capabilities — list read-only features and limitations
+  generated_at: 2026-06-07
+  source_of_truth: src/server/tools/list-capabilities.ts
+  purpose: >
+    Возвращает статический набор features, limitations, annotation types,
+    supported subtitle languages, fixture IDs. Используется для
+    capability discovery перед реальными вызовами.
+  identity:
+    name: list_capabilities
+    title: "List Anotator8 Capabilities"
+    description: "Return supported read-only ChatGPT integration features and limitations."
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      openWorldHint: false
+  input_schema:
+    shape: empty object
+    fields: []
+  output_schema:
+    shape: object
+    fields:
+      - features: array of strings
+      - limitations: array of strings
+      - annotationTypes: array of strings
+      - supportedSubtitleLanguages: array of strings (en | ru | kk)
+      - fixtureIds: array of strings
+  errors:
+    codes: [internal_error]
+    never_leaked: [absolute paths, raw stack traces]
+  data_used:
+    input: none (no projectData, no fixtureId required)
+    output: static config
+  access_boundary:
+    scope: server-side static config
+    requires_oauth: false (auth enforced at HTTP layer)
+    requires_consent: false
+    reads_user_files: false
+  vehicle_claim_ceiling: GENERIC_ARCHETYPE
+  exact_vehicle_specificity: GENERIC_ARCHETYPE
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY (also FIELD_READ_ONLY in real ChatGPT)
+  release_readiness: app_review_ready (App Store submission)
+  evidence:
+    repo_evidence: src/server/tools/list-capabilities.ts
+    runtime_evidence: tests/contract/mcp-tool-contracts.test.ts, tests/unit/schemas.test.ts
+    official_doc_evidence: OFF-MCP-SPEC (tools spec 2025-06-18)
+    prototype_evidence: none
+    inference: none
+    unclear: none
+  evidence_status: CONFIRMED_FOR_PLATFORM
+  decision_refs: []
+  privacy:
+    reads_pii: false
+    writes_pii: false
+    logs_pii: false
+    ferpa_coppa_gdpr_relevant: false
+  safety:
+    shell_exec: no
+    fs_write: no
+    arb_command: no
+  cybersecurity:
+    input_validation: Zod (empty schema)
+    output_sanitization: structuredContent + IntegrationError
+    auth_required: yes (HTTP layer)
+  tests:
+    files: [tests/contract/mcp-tool-contracts.test.ts, tests/unit/schemas.test.ts]
+    test_cases: 2 (approx)
+    pass: true
+  release:
+    documented_in: docs/CHATGPT_APP_STORE.md § 2.1
+    sample_invocation: "What can this connector do?"
+    screenshot_prompt: "A card with listed features, limitations, supported annotation types, supported subtitle languages, fixture IDs."
+  known:
+    - Tool is static; output does not change at runtime
+    - No projectData required; safe to call before any fixture load
+    - Used by maintainer to verify MCP conformance in MCP Inspector
+  unknown:
+    - Whether App Store reviewer will require additional features listed
+  not_proven:
+    - That this tool alone is sufficient for App Store capability disclosure
+  assumptions:
+    - features list is curated and stable
+  contradictions: none
+  allowed_next_steps:
+    - Add OAuth 2.1 scope requirement (post G-01)
+    - Add discoverable version field
+  forbidden_shortcuts:
+    - Claiming this tool proves the lab is App Store ready
+  related_sources:
+    - src/server/tools/list-capabilities.ts
+    - tests/contract/mcp-tool-contracts.test.ts
+    - docs/CHATGPT_APP_STORE.md
+  related_gaps: []
+  related_analogs:
+    - capabilities.example.json (mirrors features list)
+  related_methods:
+    - static-discovery (capability list at server start)
+  related_truth_passport: truth-passport/tool-list-capabilities.yaml
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07

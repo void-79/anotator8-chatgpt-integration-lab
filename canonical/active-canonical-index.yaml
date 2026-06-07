@@ -1,0 +1,230 @@
+active_canonical_index:
+  version: 0.5.0
+  generated_at: 2026-06-07
+  previous_version: 0.4.0
+  release_type: knowledge-base-retrofit
+  main_goal: >
+    Retrofit the system-prompt knowledge-base framework (truth passports, evidence ceiling,
+    role views, source radar, answer policy) onto the Anotator8×ChatGPT×MCP lab.
+    No new runtime behavior. No changes to src/**, tests/**, REPORT.md, or legacy docs.
+  canonical_objects:
+    active_canonical_index: 1
+    product_dossier: 1
+    runtime_record: 1
+    tool_record: 8
+    decision_record: 6
+    official_doc_record: 1
+    regulatory_record: 1
+    threat_record: 1
+    assurance_case_record: 1
+    source_radar: 1
+    discovery_lead: 10
+    unknown_unknown: 1
+  vehicles:
+    note: >
+      This lab is not an SDV/automotive product. The system-prompt term "VEHICLE_DOSSIER"
+      is mapped to "PRODUCT_DOSSIER" (Anotator8 v24.0.0 + lab v0.4.0 snapshot).
+    products:
+      - id: product-dossier-anotator8-v24-lab-v04
+        name: Anotator8 + ChatGPT Integration Lab
+        oem: Anotator8 team
+        model: Anotator8 v24.0.0
+        lab_version: 0.4.0
+        generation: 24.x
+        market: internal-demo (not commercial)
+        trim: read-only-MCP
+        software_version: lab-0.4.0 / SDK-1.29.0 / ext-apps-1.7.4
+        source: canonical/product-dossier.yaml
+  components:
+    note: >
+      "COMPONENT_RECORD" is mapped to "RUNTIME_RECORD" (Node 24, deps, FS-allowlist,
+      zero shell exec, transport matrix). See canonical/runtime-record.yaml.
+    count: 1
+  capabilities:
+    note: >
+      "CAPABILITY_RECORD" is mapped to "TOOL_RECORD" (8 read-only MCP tools).
+    count: 8
+    list:
+      - list_capabilities
+      - inspect_project
+      - validate_project
+      - summarize_annotations
+      - find_annotations
+      - suggest_labels
+      - create_review_plan
+      - export_chatgpt_report
+  decisions:
+    note: >
+      6 architectural decisions. 3 implemented in this release: bridge-strategy,
+      auth-strategy, no-write-tool-policy. 3 documented but not fully active:
+      cors-allowlist, transports, no-shell-exec-policy.
+    count: 6
+  claims:
+    note: >
+      Claims are stored inline in tool-record/, decision-record/, and product-dossier.yaml.
+      Each claim has evidence_status (CONFIRMED_FOR_PLATFORM / RUNTIME / MOCK / LEAD_ONLY / UNKNOWN).
+    canonical_claim_count_target: 25
+  evidence:
+    note: >
+      RUNTIME evidence: 118/118 tests + 4/4 verify (build+test+smoke+demo:stdio).
+      OFFICIAL_DOC evidence: 12 URLs, all LOCATOR_ONLY (see source-radar.yaml).
+      REPO evidence: Anotator8 v24.0.0 source, lab source (REPO_LIVE).
+    runtime_pass_count: 118
+    verify_pass_count: 4
+  sources:
+    note: >
+      Tier 1 (OFFICIAL_SPEC) = 12 entries, all LOCATOR_ONLY.
+      Tier 2 (PRIMARY) = 7 entries, all LIVE.
+      Tier 3 (RUNTIME) = 5 entries (4 PASS, 1 UNTESTED).
+      Tier 4 (LEAD_ONLY) = 7 entries.
+      CAPTURED_HASHED count = 0 (forward work, see discovery-lead/).
+    total: 31
+    captured_hashed: 0
+  source_snapshots:
+    note: >
+      No CAPTURED_HASHED snapshots exist yet. Promotion to CAPTURED_HASHED is
+      listed as a forward action; not blocking for v0.5.0 release.
+  gaps:
+    count: 20
+    blocking_count: 3
+    high_safety_count: 3
+    medium_count: 8
+    low_count: 6
+    unknown_unknown_count: 10
+    source: index/GAP_HARVEST.md
+  signals:
+    note: >
+      "SIGNAL_RECORD" mapped to "EVENT_RECORD" (audit log line, smoke result, test result).
+      See src/server/audit.ts for live event stream.
+  privacy:
+    note: >
+      See canonical/regulatory-record.yaml (FERPA/COPPA/GDPR + RFC 9728 + RFC 6750)
+      and canonical/threat-record.yaml.
+  data_flows:
+    note: >
+      Live: projectData → Anotator8Adapter.parse → normalize → validate → tool handler
+      → wrapTool → structuredContent → MCP response. No mutation. No FS write.
+  blueprints:
+    note: >
+      8 read-only tool blueprints (see canonical/tool-record/*.yaml).
+      Plus 2 cross-cutting: widget-bridge, review-prompt.
+      Safe re-use: mock data, allowlisted fixtures, no real Anotator8 backend.
+  tests:
+    total: 118
+    files: 17
+    suite_distribution:
+      unit: 7
+      integration: 6
+      contract: 4
+    runner: vitest@^3.2.4
+  truth_passports:
+    count_target: 7
+    list:
+      - lab-v0.4.0
+      - tool-list-capabilities
+      - tool-inspect-project
+      - tool-validate-project
+      - decision-bridge-strategy
+      - decision-auth-strategy
+      - decision-no-write-tool-policy
+  answer_policy:
+    note: >
+      See fixtures/answer/*.md (4 fixtures in v0.5.0; expand to 8 in v0.6.0).
+      Every non-trivial answer must: (a) reference a truth passport, (b) state
+      answer_ceiling, (c) list forbidden shortcuts, (d) propose safe next step.
+  role_views:
+    count_target: 4
+    list:
+      - 01-product-stack-tree
+      - 03-protocol-transport-middleware
+      - 06-failure-casebook
+      - 10-final-decision-matrix
+  analogs:
+    note: >
+      From system prompt + lab context. List in roles/07-ready-semi-ready-solutions.md.
+      Examples: MCP Inspector (analog of Postman for MCP), Cloudflare Tunnel (analog
+      of ngrok), official MCP examples (analog of "hello world"). Not proof, just
+      inspiration for schemas.
+  methods:
+    note: >
+      Adapter-first; evidence-classified; no mutation; allowlist-FS; zero shell.
+      See canonical/assurance-case-record.yaml.
+  toolchains:
+    note: >
+      Node 24.13.0 + TypeScript 5.9.3 + tsc + vitest 3.2.4 + tsx 4.21.0 + js-yaml (NEW in v0.5.0).
+      See canonical/runtime-record.yaml § toolchains.
+  regulations:
+    note: >
+      FERPA, COPPA, GDPR (privacy, applies because Anotator8 is education tool).
+      RFC 9728, RFC 6750 (auth).
+      OpenAI Apps SDK submission guidelines (vendor, not law).
+      See canonical/regulatory-record.yaml.
+  threats:
+    note: >
+      10-row threat model in canonical/threat-record.yaml. Includes:
+      demo-bearer-auth, education-record exposure, widget _meta.projectData leak,
+      vitest UI RCE (dev-only), MCP SDK recursion (non-fatal).
+  assurance_cases:
+    note: >
+      Top-level assurance case: read-only + no-shell + no-arb-FS + DEMO banner.
+      Sub-cases: per-tool (no mutation), per-decision (auditable).
+  discovery_leads:
+    count: 10
+    list:
+      - mcp-sdk-1.30
+      - apps-sdk-post-2026-01-26
+      - oauth-2.1-as-ref-impl
+      - vitest-4-rolldown-windows
+      - cloudflare-tunnel-mcp
+      - golden-anotator8-fixture
+      - reverse-proxy-mcp
+      - load-test-10k-annotations
+      - real-chatgpt-developer-mode-e2e
+      - mcp-sampling-roots-prompts
+  source_radar:
+    tiers: 4
+    captured_hashed: 0
+    locator_only: 12
+    live: 12
+    lead_only: 7
+  unknown_unknowns:
+    count: 10
+    list_source: index/GAP_HARVEST.md § Unknown Unknowns
+  legacy_read_only:
+    note: >
+      These files must NOT be treated as canonical truth. They are historical views.
+    files:
+      - REPORT.md
+      - docs/QA_REPORT.md
+      - docs/BUILD_REPORT.md
+      - docs/FINAL_REPORT.md
+      - docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md
+      - src/** (runtime code, NOT modified)
+      - tests/** (NOT modified)
+      - fixtures/sample-project.anotator8.json
+      - fixtures/near-real-project.anotator8.json
+  rules:
+    - id: markdown-is-view
+      rule: Markdown (REPORT.md, docs/*.md, roles/*.md) is a generated view, not stronger truth.
+    - id: yaml-beats-prose
+      rule: Decision YAML beats prose. If a claim lives only in prose without a canonical record, it is a LEAD_ONLY.
+    - id: truth-passport-required
+      rule: Every decision and tool must have a truth passport. If absent, ceiling = NEEDS_DATA.
+    - id: source-url-not-evidence
+      rule: Source URL is locator-only until captured and hashed.
+    - id: platform-not-exact-vehicle
+      rule: Platform docs (MCP, Apps SDK) are not exact vehicle evidence (Anotator8, lab).
+    - id: discovery-not-claim
+      rule: Discovery leads are not claims. LEAD_ONLY in source-radar is not evidence.
+    - id: analogy-not-proof
+      rule: Analogies (MCP Inspector, Cloudflare Tunnel) can inspire schemas, not prove facts.
+    - id: ceiling-is-min
+      rule: answer_ceiling = min(vehicle_specificity, source_snapshot_state, evidence_strength, decision_status, privacy_gate, safety_gate, test_maturity, unresolved_gaps, release_readiness, exact_artifact_quality, authorization_scope, market_year_trim_software_specificity).
+    - id: new-roles-allowed
+      rule: New roles are allowed when repeated gaps justify them (e.g. Source Radar, Privacy, Regulatory).
+    - id: no-fake-hashes
+      rule: No fake sha256. A CAPTURED_HASHED entry must have a real hash; otherwise it stays LOCATOR_ONLY.
+    - id: no-shell-in-validators
+      rule: New validators must not use child_process / exec / spawn. Pure Node + js-yaml + fs only.
+    - id: legacy-not-overwritten
+      rule: Legacy files (REPORT.md, docs/QA_REPORT.md, docs/BUILD_REPORT.md, docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md) are not overwritten.

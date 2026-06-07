@@ -1,0 +1,104 @@
+decision_record:
+  object_id: decision-auth-strategy
+  object_type: DECISION_RECORD
+  title: Auth Strategy — Bearer (RFC 6750) + RFC 9728 PRM, OAuth 2.1 AS deferred
+  generated_at: 2026-06-07
+  source_of_truth: src/server/auth.ts, src/server/oauth/protected-resource-metadata.ts
+  status: ACCEPTED + IMPLEMENTED + PARTIALLY_VERIFIED
+  decision_summary: >
+    Используем Bearer token (MCP_AUTH_TOKEN, optional) с RFC 6750
+    WWW-Authenticate challenge. Плюс RFC 9728 Protected Resource Metadata
+    foundation: /.well-known/oauth-protected-resource[/<path>] + resource_metadata
+    в 401/403 challenge. OAuth 2.1 Authorization Server (AS) — DEFERRED
+    (GAP G-01). DEMO-ONLY mode (no token) для local dev.
+  context:
+    problem: >
+      Public exposure требует authentication. OpenAI Apps SDK рекомендует
+      OAuth 2.1 для production. Но OAuth 2.1 AS — это значительный объём
+      работы (token issuance, introspection, JWKS, DCR, scopes).
+      Compromise: ship discovery foundation (RFC 9728) + RFC 6750 Bearer,
+      defer OAuth 2.1 AS.
+    alternatives_considered:
+      - alt: только Bearer без RFC 9728
+        rejected: Apps SDK и любой OAuth-aware client ожидают discovery
+      - alt: сразу OAuth 2.1 AS
+        rejected: объём работы слишком большой для v0.5.0
+      - alt: только Mutual TLS
+        rejected: не подходит для ChatGPT iframe
+  chosen_solution: Bearer + RFC 9728 PRM; OAuth 2.1 AS deferred
+  evidence:
+    repo_evidence: src/server/auth.ts, src/server/oauth/protected-resource-metadata.ts
+    runtime_evidence:
+      - tests/integration/auth-bypass.test.ts
+      - tests/integration/oauth/protected-resource.test.ts
+      - tests/unit/oauth/protected-resource-metadata.test.ts
+    official_doc_evidence:
+      - OFF-RFC-9728
+      - OFF-RFC-6750
+      - OFF-APPS-SDK-AUTH
+  evidence_status: CONFIRMED_FOR_PLATFORM + RUNTIME_VERIFIED + RFC_9728_FOUNDATION_ONLY
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY
+  release_readiness: not_ready (production blocked on OAuth 2.1 AS, GAP G-01)
+  decision_owner: lab maintainer
+  decision_date: 2026-06-07 (v0.3.0 introduced RFC 9728 PRM)
+  review_due: 2026-09-07
+  re_evaluate_when:
+    - OAuth 2.1 AS reference implementation is available
+    - App Store reviewer requires OAuth 2.1 before approval
+    - MCP_AUTH_TOKEN rotation is needed
+  impact:
+    what_changes:
+      - src/server/auth.ts (Bearer enforcement)
+      - src/server/oauth/protected-resource-metadata.ts (PRM doc builder)
+      - src/server/app.ts (well-known route + WWW-Authenticate)
+      - 9 new env vars in .env.example
+    what_does_not_change:
+      - 8 tools
+      - transports
+      - CORS allowlist
+  decision_refs:
+    upstream: [OFF-RFC-9728, OFF-RFC-6750, OFF-APPS-SDK-AUTH]
+    related_decisions: [decision-cors-allowlist, decision-no-write-tool-policy]
+  ceiling: RUNTIME_VERIFIED + RFC_9728_FOUNDATION_ONLY
+  ceiling_explanation: >
+    PRM foundation is verified by tests. AS endpoints (token issuance,
+    introspection, JWKS, DCR) are not implemented. Bearer with static
+    MCP_AUTH_TOKEN is the actual gate.
+  known:
+    - 9 env vars for OAuth config (all optional)
+    - DEMO-ONLY banner when MCP_AUTH_TOKEN unset
+    - WWW-Authenticate: Bearer realm="anotator8-chatgpt-lab", error=..., resource_metadata=...
+    - CORS * on well-known (RFC 9728 §3.1 requires public access)
+    - Comma-separated tokens supported in MCP_AUTH_TOKEN
+  unknown:
+    - When OAuth 2.1 AS will be implemented (depends on maintainer priority)
+    - Whether App Store reviewer accepts Bearer + PRM (vs requires AS)
+  not_proven:
+    - That this is production-grade auth (it is not; production needs AS)
+    - That Bearer with random token is safe for public App Store
+  assumptions:
+    - Lab will not be publicly exposed without MCP_AUTH_TOKEN (banner enforces awareness)
+    - OAuth 2.1 AS will be a separate process (not embedded in lab)
+  contradictions: none
+  allowed_next_steps:
+    - Implement OAuth 2.1 AS (post G-01)
+    - Add per-tool scope (post G-01)
+    - Add token rotation
+    - Add rate limit (at reverse proxy, not lab)
+  forbidden_shortcuts:
+    - Claiming this is OAuth 2.1 ready (it is not)
+    - Claiming this is App Store ready (it is not; needs AS)
+    - Exposing on public tunnel without MCP_AUTH_TOKEN
+  related_sources:
+    - src/server/auth.ts
+    - src/server/oauth/protected-resource-metadata.ts
+    - tests/integration/oauth/protected-resource.test.ts
+    - docs/SECURITY.md
+    - docs/CHATGPT_APP_SETUP.md § Production Auth Gap
+    - canonical/regulatory-record.yaml
+  related_gaps: [G-01, G-07, G-15, UU-09]
+  related_truth_passport: truth-passport/decision-auth-strategy.yaml
+  related_analogs:
+    - Auth0 / Keycloak (full OAuth 2.1 AS)
+    - Passport.js (similar bearer + challenge)
+  last_reviewed: 2026-06-07

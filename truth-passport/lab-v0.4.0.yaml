@@ -1,0 +1,164 @@
+truth_passport:
+  object_id: lab-v0.4.0
+  object_type: TRUTH_PASSPORT
+  title: lab v0.4.0 — Anotator8×ChatGPT Integration Lab
+  generated_at: 2026-06-07
+  reviewer: Mavis (knowledge-base retrofit run)
+  current_answer_ceiling: PARTIAL_EXACT_MARKET + RUNTIME_VERIFIED
+  ceiling_calculation: >
+    min(vehicle_specificity=PARTIAL_EXACT_MARKET [Anotator8 v24.0.0 REPO],
+        source_snapshot_state=CAPTURED_UNHASHED [runtime + repo],
+        evidence_strength=CONFIRMED_FOR_PLATFORM,
+        decision_status=ACCEPTED [all 3 implemented decisions],
+        privacy_gate=NEEDS_DPIA [FERPA/COPPA/GDPR],
+        safety_gate=MEDIUM [no shell, allowlisted FS, no arb command],
+        test_maturity=EMULATOR_READY [118/118 tests],
+        unresolved_gaps=20 [3 BLOCKING],
+        release_readiness=app_review_ready [not production-ready],
+        exact_artifact_quality=PARTIAL [synthetic fixture],
+        authorization_scope=read-only-mvp [no OAuth 2.1 AS],
+        market_year_trim_software_specificity=Anotator8_v24.0.0+lab_v0.4.0+SDK_1.29.0+ext-apps_1.7.4)
+  weakest_link: >
+    privacy_gate (NEEDS_DPIA) ИЛИ unresolved_gaps (20, 3 BLOCKING).
+    ceiling = PARTIAL_EXACT_MARKET из-за privacy+gap, не RUNTIME_VERIFIED.
+  vehicle_scope: Anotator8 v24.0.0 + lab v0.4.0
+  capability_scope: 8 read-only tools, 1 prompt, 1 widget resource
+  decision_refs:
+    - canonical/decision-record/bridge-strategy.yaml
+    - canonical/decision-record/auth-strategy.yaml
+    - canonical/decision-record/no-write-tool-policy.yaml
+  safety_status: GO_SIM (safe in simulator) + GO_READ_ONLY (real ChatGPT with Bearer, DEMO-ONLY banner)
+  evidence_status: CONFIRMED_FOR_PLATFORM + RUNTIME_VERIFIED
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY + FIELD_READ_ONLY
+  release_readiness: "app_review_ready (App Store submission: NEEDS privacy policy + screenshots + OAuth 2.1)"
+  privacy_status: NEEDS_DPIA
+  source_snapshot_state: "CAPTURED_UNHASHED (runtime + repo); LOCATOR_ONLY (12 official URLs)"
+  confidence: MEDIUM-HIGH
+  risk_level: "MEDIUM (G-15 DEMO-ONLY footgun, G-16 privacy gap)"
+  completeness: "0.7 (deferred items: G-01..G-07, G-19)"
+  identity:
+    name: anotator8-chatgpt-integration-lab
+    version: 0.4.0
+    product: Anotator8 v24.0.0
+    mcp_sdk: 1.29.0
+    ext_apps: 1.7.4
+    node: 24.13.0
+  consumer_features:
+    - 8 read-only tools
+    - 1 prompt (review_anotator8_project)
+    - 1 widget resource (ui://anotator8/review-widget.html)
+    - 2 transports (Streamable HTTP, stdio)
+    - Bearer + RFC 9728 PRM foundation
+    - Apps host bridge primary (2026-01-26) + legacy fallback
+  hardware:
+    node: 24.13.0
+    deps: 3 production (SDK, ext-apps, zod); 5 dev
+  os_kernel_platform:
+    protocol: MCP 2025-06-18
+    bridge: Apps SDK 2026-01-26
+  app_model:
+    type: server-side MCP app
+    widget: TS + HTML + CSS in src/widget/
+    native_app: false
+  connectivity:
+    http: 127.0.0.1:8787 default
+    stdio: local MCP clients
+    tunnel: cloudflared / ngrok / tunnel-client / VPS
+  telemetry:
+    audit: stderr JSON lines
+    redaction: Bearer + MCP_AUTH_TOKEN
+  privacy:
+    ferpa_coppa_gdpr: NEEDS_DPIA
+    ferpa_coppa_gdpr_preserved_opaque: true
+  safety:
+    shell_exec: zero
+    fs_write: zero
+    arb_command: zero
+  cybersecurity:
+    threat_model: canonical/threat-record.yaml (10 rows)
+    auth: Bearer (RFC 6750) + RFC 9728 PRM foundation; OAuth 2.1 AS deferred
+  tests:
+    total: 118
+    files: 17
+    result: PASS
+  release:
+    current: 0.4.0
+    next: 0.5.0 (knowledge-base retrofit, no runtime change)
+    app_store_blockers: [G-01, G-02, G-19]
+  source_quality:
+    repo_evidence: LIVE
+    runtime_evidence: LIVE (4/4 verify)
+    official_doc_evidence: 12 LOCATOR_ONLY
+  exact_vehicle_specificity: PARTIAL_EXACT_MARKET
+  known:
+    - 8 read-only tools with Zod I/O schemas
+    - 118/118 tests pass
+    - 4/4 verify pass (build, test, smoke, demo:stdio)
+    - RFC 9728 PRM foundation
+    - Zero shell exec, zero FS write
+    - DEMO-ONLY banner on no-token
+    - Bridge detection: Apps host (primary) + window.openai (fallback)
+  unknown:
+    - Real ChatGPT e2e (GAP G-02)
+    - v25+ compatibility
+    - Whether Apps SDK reviewer will require OAuth 2.1
+  not_proven:
+    - Production-ready (no OAuth 2.1 AS, no reverse proxy)
+    - Public App Store ready (no privacy policy, no screenshots, no AS)
+    - Real ChatGPT e2e verified
+    - 10k+ annotation support
+  assumptions:
+    - Anotator8 v24.0.0 is current
+    - lab HEAD = 42906e1, clean
+    - legacy docs remain read-only
+  contradicted_or_conflicting: none
+  allowed_next_steps:
+    - "Add OAuth 2.1 AS (post G-01)"
+    - "Add reverse proxy (post G-06)"
+    - "Add golden fixture (post G-04)"
+    - "Add live ChatGPT e2e verification (post G-02)"
+    - "Capture Tier 1 URLs to CAPTURED_HASHED (forward work)"
+  forbidden_shortcuts:
+    - "Claiming production ready without OAuth 2.1 AS"
+    - "Claiming App Store ready without privacy policy + OAuth 2.1"
+    - "Claiming ChatGPT e2e verified without live test"
+    - "Exposing on public tunnel without MCP_AUTH_TOKEN"
+    - "Adding write tools without OAuth 2.1 AS + reversal model"
+    - "Reading real Anotator8 backend without privacy redaction pipeline"
+    - "Loosening the FS allowlist"
+    - "Adding child_process / exec / spawn in src/server/**"
+  required_artifacts_to_upgrade:
+    - "To PRODUCTION_READY: OAuth 2.1 AS + reverse proxy + privacy redaction"
+    - "To APP_STORE_READY: privacy policy URL + 3+ screenshots + support contact + OAuth 2.1"
+    - "To RUNTIME_E2E: live ChatGPT Developer Mode screenshot + log"
+    - "To GOLDEN: real Anotator8 export + redaction pipeline"
+    - "To LOAD_TESTED: 10k annotation benchmark"
+  related_sources:
+    - canonical/product-dossier.yaml
+    - canonical/runtime-record.yaml
+    - canonical/source-radar.yaml
+    - canonical/threat-record.yaml
+    - canonical/regulatory-record.yaml
+    - canonical/assurance-case-record.yaml
+    - canonical/discovery-lead/index.yaml
+    - REPORT.md (current authoritative runtime report)
+  related_gaps:
+    - G-01 (OAuth 2.1 AS)
+    - G-02 (ChatGPT e2e)
+    - G-04 (golden fixture)
+    - G-05 (load test)
+    - G-06 (reverse proxy)
+    - G-15 (DEMO-ONLY footgun)
+    - G-16 (privacy)
+    - G-19 (App Store assets)
+  related_analogs:
+    - MCP Inspector (analog of Postman for MCP)
+    - Cloudflare Tunnel (analog of ngrok)
+    - Stripe MCP server (read-only first, write later)
+  related_methods:
+    - adapter-first
+    - evidence-classified
+    - no-mutation
+    - allowlist-FS
+  last_reviewed: 2026-06-07
+  review_due: 2026-09-07

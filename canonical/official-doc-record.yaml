@@ -1,0 +1,179 @@
+official_doc_record:
+  object_id: official-doc-record-v0.5.0
+  object_type: OFFICIAL_DOC_RECORD
+  title: Official Documentation Sources — все vendor / spec / RFC / regulatory ссылки
+  generated_at: 2026-06-07
+  purpose: >
+    Машино-читаемая карта официальной документации. Каждая запись имеет
+    canonical_url, source_family, locator_status, snapshot_state, proves,
+    does_not_prove. Этот файл — canonical. Tier 1 mapping — в
+    canonical/source-radar.yaml.
+  entries:
+    - id: OFF-MCP-SPEC
+      title: Model Context Protocol Specification
+      family: protocol-spec
+      canonical_url: https://modelcontextprotocol.io/specification/2025-06-18/
+      version: 2025-06-18
+      locator_status: LOCATOR_ONLY
+      snapshot_state: MISSING_CAPTURE
+      used_for:
+        - src/server/app.ts (StreamableHTTPServerTransport, McpServer)
+        - src/server/index.ts (StdioServerTransport)
+        - src/server/tools/index.ts (toolRegistry)
+        - tests/integration/http-mcp-protocol.test.ts
+      proves:
+        - "Lab declares protocolVersion 2025-06-18 in initialize"
+        - "Lab tools/resources/prompts shape matches 2025-06-18"
+      does_not_prove:
+        - "Lab is fully conformant to 2025-06-18 in all edge cases"
+        - "All 2025-06-18 clients accept the lab"
+      staleness_trigger: new MCP spec release
+      refresh_due: 2026-12-07
+    - id: OFF-MCP-ARCH
+      title: MCP Architecture Overview
+      family: protocol-spec
+      canonical_url: https://modelcontextprotocol.io/docs/concepts/architecture
+      locator_status: LOCATOR_ONLY
+      used_for: roles/03-protocol-transport-middleware.md, docs/ARCHITECTURE.md
+      proves:
+        - "Lab role split (server / client / host) follows MCP architecture"
+      staleness_trigger: MCP spec bump
+      refresh_due: 2026-12-07
+    - id: OFF-APPS-SDK-QUICKSTART
+      title: OpenAI Apps SDK Quickstart
+      family: vendor-docs
+      canonical_url: https://developers.openai.com/apps-sdk/quickstart
+      version: 2026-01-26
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - src/widget/widget.ts (BRIDGE_PROTOCOL_VERSION = "2026-01-26")
+        - src/server/app.ts (registerAppTool)
+        - docs/CHATGPT_APP_SETUP.md § ChatGPT Developer Mode
+      proves:
+        - "Lab uses Apps-bridge ui/initialize + tools/call as primary"
+      staleness_trigger: Apps SDK version bump
+      refresh_due: 2026-09-07
+    - id: OFF-APPS-SDK-REFERENCE
+      title: OpenAI Apps SDK Reference
+      family: vendor-docs
+      canonical_url: https://developers.openai.com/apps-sdk/reference
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - src/widget/widget.ts (window.openai.callTool fallback)
+        - src/server/app.ts (Zod output schemas)
+      staleness_trigger: Apps SDK bump
+      refresh_due: 2026-09-07
+    - id: OFF-APPS-SDK-AUTH
+      title: OpenAI Apps SDK Auth
+      family: vendor-docs
+      canonical_url: https://developers.openai.com/apps-sdk/build/auth
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - docs/CHATGPT_APP_SETUP.md § Production Auth Gap
+        - docs/SECURITY.md § Controls
+        - canonical/regulatory-record.yaml
+      proves:
+        - "OAuth 2.1 is the Apps SDK recommended production auth"
+      does_not_prove:
+        - "Bearer auth is sufficient for App Store review"
+      staleness_trigger: Apps SDK bump
+      refresh_due: 2026-09-07
+    - id: OFF-APPS-SDK-SEC
+      title: OpenAI Apps SDK Security & Privacy
+      family: vendor-docs
+      canonical_url: https://developers.openai.com/apps-sdk/guides/security-privacy
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - docs/SECURITY.md
+        - canonical/threat-record.yaml
+        - src/server/resources/widget-resource.ts (CSP)
+        - src/server/anotator8-adapter.ts (10MB cap, error shape)
+      proves:
+        - "Apps SDK recommends least privilege, explicit consent, defense in depth, server-side validation, audit logs, sandbox widgets with CSP, OAuth + scope checks"
+      staleness_trigger: Apps SDK bump
+      refresh_due: 2026-09-07
+    - id: OFF-APPS-SDK-TEST
+      title: OpenAI Apps SDK Testing
+      family: vendor-docs
+      canonical_url: https://developers.openai.com/apps-sdk/deploy/testing
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - roles/05-testing-verification-mock.md
+        - tests/ (17 files / 118 cases)
+        - npm run inspect (MCP Inspector wrapper)
+      staleness_trigger: Apps SDK bump
+      refresh_due: 2026-09-07
+    - id: OFF-APPS-SDK-SUB
+      title: OpenAI Apps SDK Submission
+      family: vendor-docs
+      canonical_url: https://developers.openai.com/apps-sdk/deploy/submission
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - docs/CHATGPT_APP_STORE.md
+      staleness_trigger: Apps SDK bump
+      refresh_due: 2026-09-07
+    - id: OFF-APPS-SDK-GUIDELINES
+      title: OpenAI Apps SDK Submission Guidelines
+      family: vendor-docs
+      canonical_url: https://developers.openai.com/apps-sdk/app-submission-guidelines
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - docs/CHATGPT_APP_STORE.md (10 sections)
+        - canonical/regulatory-record.yaml CAT-VENDOR
+      staleness_trigger: Apps SDK bump
+      refresh_due: 2026-09-07
+    - id: OFF-RFC-9728
+      title: RFC 9728 — OAuth 2.0 Protected Resource Metadata
+      family: rfc
+      canonical_url: https://www.rfc-editor.org/rfc/rfc9728
+      version: April 2025
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - src/server/oauth/protected-resource-metadata.ts
+        - tests/unit/oauth/protected-resource-metadata.test.ts
+        - tests/integration/oauth/protected-resource.test.ts
+        - canonical/regulatory-record.yaml
+      proves:
+        - "Lab serves /.well-known/oauth-protected-resource[/<path>] (RFC 9728 §3.1)"
+        - "Lab includes resource_metadata=... in 401/403 challenge (§5.1)"
+      does_not_prove:
+        - "Lab is a full RFC 9728 implementation (only PRM, not AS)"
+      staleness_trigger: errata
+      refresh_due: 2027-04
+    - id: OFF-RFC-6750
+      title: RFC 6750 — OAuth 2.0 Bearer Token Usage
+      family: rfc
+      canonical_url: https://www.rfc-editor.org/rfc/rfc6750
+      version: October 2012
+      locator_status: LOCATOR_ONLY
+      used_for:
+        - src/server/auth.ts
+        - tests/integration/auth-bypass.test.ts
+        - canonical/regulatory-record.yaml
+      proves:
+        - "Lab uses Bearer scheme in Authorization header"
+        - "Lab uses WWW-Authenticate: Bearer realm=..., error=... on 401/403"
+      staleness_trigger: errata
+      refresh_due: 2027-10
+    - id: OFF-RFC-8414
+      title: RFC 8414 — OAuth 2.0 Authorization Server Metadata
+      family: rfc
+      canonical_url: https://www.rfc-editor.org/rfc/rfc8414
+      locator_status: LOCATOR_ONLY
+      used_for: future AS implementation (deferred)
+      does_not_prove:
+        - "Lab has an AS"
+        - "Lab is RFC 8414 conformant"
+      staleness_trigger: errata
+      refresh_due: 2027-04
+  source_families_summary:
+    protocol_spec: 2 entries
+    vendor_docs: 8 entries
+    rfc: 3 entries
+  snapshot_state_distribution:
+    locator_only: 12
+    captured_hashed: 0
+  staleness_policy: >
+    Каждая запись имеет staleness_trigger (новый spec / SDK bump / errata)
+    и refresh_due (когда пересмотреть). Промоушен в CAPTURED_HASHED
+    — forward work (см. source-radar.yaml § forward_work).

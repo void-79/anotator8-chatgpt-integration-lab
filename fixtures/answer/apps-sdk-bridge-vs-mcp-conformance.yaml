@@ -1,0 +1,34 @@
+answer_fixture:
+  id: apps-sdk-bridge-vs-mcp-conformance
+  object_type: ANSWER_FIXTURE
+  generated_at: 2026-06-07
+  purpose: "Проверяет: Does using Apps SDK 2026-01-26 bridge prove MCP 2025-06-18 server conformance?"
+  question: "Does using the Apps SDK 2026-01-26 bridge prove the lab is an MCP 2025-06-18 compliant server?"
+  answer: Partially.
+  ceiling: APPS_SDK_BRIDGE_LOCAL_ONLY + CONFIRMED_FOR_PLATFORM
+  explanation: >
+    The lab uses Apps SDK 2026-01-26 bridge (ui/initialize + tools/call via
+    postMessage) as the primary widget path, and declares protocolVersion
+    2025-06-18 in its MCP initialize handshake. Protocol conformance is
+    verified by tests/integration/http-mcp-protocol.test.ts + npm run smoke.
+    However, Apps SDK bridge conformance is verified only at source-level
+    (tests/contract/widget-bridge.test.ts checks that the TS source contains
+    the bridge strings). Real ChatGPT host behavior is NOT verified on this
+    host (GAP G-02).
+  forbidden_shortcuts:
+    - "Claiming the lab is ChatGPT e2e verified (it is not; GAP G-02)"
+    - "Claiming Apps SDK bridge proves full MCP 2025-06-18 compliance (only protocol-level, not host-level)"
+    - "Treating Inspector test as ChatGPT proof (different transport, different auth)"
+  safe_next_step: >
+    Run live ChatGPT Developer Mode e2e with paid account + tunnel
+    to close GAP G-02.
+  evidence:
+    - src/widget/widget.ts (BRIDGE_PROTOCOL_VERSION = "2026-01-26")
+    - src/server/app.ts (protocolVersion: "2025-06-18")
+    - tests/contract/widget-bridge.test.ts (source-level)
+    - tests/integration/http-mcp-protocol.test.ts (protocol-level)
+    - npm run smoke (runtime-level)
+  related_truth_passport: truth-passport/decision-bridge-strategy.yaml
+  related_gaps: [G-02, G-14]
+  related_analogs:
+    - Browser devtools showing WebSocket connected vs actual message delivery
