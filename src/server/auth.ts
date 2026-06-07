@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { buildBearerChallenge, wellKnownUrlForResource, type OAuthFoundationConfig } from "./oauth/protected-resource-metadata.js";
-import { TokenValidationError, type TokenIssuer, type ValidatedToken } from "./oauth/token-issuer.js";
+import { TokenValidationError, type TokenValidator, type ValidatedToken } from "./oauth/token-issuer.js";
 import { requiredScopesFor, schemeForTool, toolRequiresAuth, type SecuritySchemesConfig } from "./oauth/security-schemes.js";
 
 const LEGACY_REALM = "anotator8-chatgpt-lab";
@@ -8,15 +8,16 @@ const LEGACY_REALM = "anotator8-chatgpt-lab";
 /**
  * MCP tool-call auth. Three behaviors, in order of precedence:
  *
- *  1. **JWT mode** (when an AS `TokenIssuer` is passed in and the request
+ *  1. **JWT mode** (when a `TokenValidator` is passed in and the request
  *     carries a Bearer token): validate the JWT (signature, iss, aud,
  *     exp, nbf, scope). On failure respond 401/403 with
  *     `WWW-Authenticate: Bearer ...` per RFC 6750 §3. The error is
  *     wrapped in the JSON body so the client can render a useful
- *     message.
+ *     message. The validator may be the in-process local issuer
+ *     (sync) or a remote IdP-backed validator (async — fetches JWKS).
  *
  *  2. **Static-token mode** (when `MCP_AUTH_TOKEN` env is set and no
- *     `TokenIssuer` is present): check the Bearer token against the
+ *     `TokenValidator` is present): check the Bearer token against the
  *     comma-separated allowlist. Preserves the v0.6.0 demo behavior.
  *
  *  3. **Local demo mode** (neither set): any request is allowed through.
@@ -39,13 +40,13 @@ export interface AuthCheckResult {
   readonly validated?: ValidatedToken;
 }
 
-export function checkAuth(
+export async function checkAuth(
   req: IncomingMessage,
   oauthConfig: OAuthFoundationConfig | undefined,
   securitySchemes: SecuritySchemesConfig | undefined,
-  tokenIssuer: TokenIssuer | undefined,
+  validator: TokenValidator | undefined,
   toolName: string | undefined,
-): AuthCheckResult {
+): Promise<AuthCheckResult> {
   // Determine whether the call requires auth.
   // - `MCP_OAUTH_REQUIRE_AUTH=true` forces every tool to require auth.
   // - `MCP_AUTH_TOKEN` env forces static-token auth.
@@ -69,13 +70,13 @@ export function checkAuth(
     };
   }
 
-  // 1) JWT validation (always try first when a TokenIssuer exists).
+  // 1) JWT validation (always try first when a TokenValidator exists).
   const expectedStatic = process.env.MCP_AUTH_TOKEN?.trim();
-  if (tokenIssuer) {
+  if (validator) {
     let required: ReadonlyArray<string> = [];
     if (toolScheme) required = requiredScopesFor(toolScheme);
     try {
-      const validated = tokenIssuer.validate(token, required);
+      const validated = await validator.validate(token, required);
       return { ok: true, validated };
     } catch (error) {
       if (error instanceof TokenValidationError) {
@@ -102,7 +103,7 @@ export function checkAuth(
     };
   }
 
-  // 3) No static token, no JWT issuer present, and no auth required → allow
+  // 3) No static token, no JWT validator present, and no auth required → allow
   //    (a Bearer was presented but nobody asked us to check it).
   if (!mustAuthenticate) return { ok: true };
 
@@ -114,12 +115,12 @@ export function checkAuth(
  * Back-compat: the v0.6.0 `requireBearerAuth` is preserved for the
  * pre-AS HTTP path. New callers should use `checkAuth`.
  */
-export function requireBearerAuth(
+export async function requireBearerAuth(
   req: IncomingMessage,
   res: ServerResponse,
   oauthConfig?: OAuthFoundationConfig,
-): boolean {
-  const result = checkAuth(req, oauthConfig, undefined, undefined, undefined);
+): Promise<boolean> {
+  const result = await checkAuth(req, oauthConfig, undefined, undefined, undefined);
   if (result.ok) return true;
   sendChallenge(res, 401, result.challenge!, { error: "Missing or invalid Bearer token" });
   return false;

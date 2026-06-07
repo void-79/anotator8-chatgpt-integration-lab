@@ -58,7 +58,7 @@ export function withToolAuth(tool: ToolModule, options: PerToolAuthOptions): Too
       const bearer = options.getBearer?.();
       if (!bearer) throw new ToolAuthError("invalid_request", buildChallenge("invalid_request", "Missing Bearer access token"));
       try {
-        options.asHandlers.tokenIssuer.validate(bearer, []);
+        await options.asHandlers.validator.validate(bearer, []);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new ToolAuthError("invalid_token", buildChallenge("invalid_token", message));

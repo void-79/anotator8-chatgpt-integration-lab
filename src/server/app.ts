@@ -23,6 +23,7 @@ import {
   loadAuthorizationServerConfig,
 } from "./oauth/authorization-server-metadata.js";
 import { loadSecuritySchemesConfig } from "./oauth/security-schemes.js";
+import { createIssuerFactory, readOauthModeFromEnv, type IssuerFactoryResult } from "./oauth/issuer-factory.js";
 
 // Upstream MCP SDK 1.29.0 + ext-apps 1.7.4 has a known recursion bug on
 // `transport.onclose → server.close` when Streamable HTTP receives certain
@@ -46,7 +47,7 @@ function captureUnhandledRejection(reason: unknown): void {
 process.on("unhandledRejection", captureUnhandledRejection);
 
 const SERVER_NAME = "anotator8-chatgpt-integration-lab";
-const SERVER_VERSION = "0.7.0";
+const SERVER_VERSION = "0.8.0";
 
 const instructions = [
   "External Anotator8 ChatGPT integration lab.",
@@ -126,11 +127,32 @@ export function createHttpMcpApp() {
   const securitySchemes = loadSecuritySchemesConfig();
   const asConfig = loadAuthorizationServerConfig();
   const cimdAllowlist = (process.env.MCP_OAUTH_CIMD_ALLOWLIST ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-  const asHandlers: AsHandlerBundle = createAsHandlers({
+  const defaultSubject = process.env.MCP_OAUTH_DEFAULT_SUBJECT?.trim() || "demo-user";
+  const tokenTtlSeconds = Number(process.env.MCP_OAUTH_TOKEN_TTL ?? "900");
+  const oauthMode = readOauthModeFromEnv();
+  // v0.8.0: build the issuer factory first so we can route the
+  // in-process AS endpoints correctly and validate tokens against
+  // the right source (local AS or external IdP's JWKS).
+  const factory: IssuerFactoryResult = buildIssuerFactory({
+    mode: oauthMode,
     asConfig,
     resource: oauthConfig.resource,
-    defaultSubject: process.env.MCP_OAUTH_DEFAULT_SUBJECT?.trim() || "demo-user",
-    tokenTtlSeconds: Number(process.env.MCP_OAUTH_TOKEN_TTL ?? "900"),
+    defaultSubject,
+    tokenTtlSeconds,
+  });
+  audit({
+    tool: "oauth-factory",
+    status: "ok",
+    summary: `OAuth mode=${factory.mode} (${factory.description})`,
+  });
+  const asHandlers: AsHandlerBundle = createAsHandlers({
+    mode: factory.mode,
+    validator: factory.validator,
+    localIssuer: factory.localIssuer,
+    asConfig,
+    resource: oauthConfig.resource,
+    defaultSubject,
+    tokenTtlSeconds,
     cimdAllowInsecureHttp: asConfig.allowInsecureHttp,
     cimdAllowlistHostnames: cimdAllowlist,
   });
@@ -197,7 +219,7 @@ export function createHttpMcpApp() {
         return;
       }
       // For /mcp: enforce Bearer auth (JWT or static) when configured.
-      const result = checkAuth(req, oauthConfig, securitySchemes, asHandlers.tokenIssuer, undefined);
+      const result = await checkAuth(req, oauthConfig, securitySchemes, factory.validator, undefined);
       if (!result.ok) {
         const status = result.challenge?.includes('error="invalid_token"') ? 403 : 401;
         res.writeHead(status, {
@@ -243,7 +265,54 @@ export function createHttpMcpApp() {
     }
   });
 
-  return { httpServer, transports, oauthConfig, asHandlers, securitySchemes };
+  return { httpServer, transports, oauthConfig, asHandlers, securitySchemes, factory };
 }
 
 export { SERVER_NAME, SERVER_VERSION };
+
+/**
+ * v0.8.0: Build the issuer factory (local AS or external IdP-backed
+ * validator) from environment configuration. Extracted as a helper
+ * so it is straightforward to test and so the wiring in
+ * `createHttpMcpApp` stays readable.
+ */
+function buildIssuerFactory(args: {
+  mode: "local" | "external";
+  asConfig: { readonly issuer: string };
+  resource: string;
+  defaultSubject: string;
+  tokenTtlSeconds: number;
+}): IssuerFactoryResult {
+  if (args.mode === "external") {
+    const idpIssuer = process.env.MCP_OAUTH_IDP_ISSUER?.trim();
+    const jwksUrl = process.env.MCP_OAUTH_IDP_JWKS_URL?.trim();
+    if (!idpIssuer) {
+      throw new Error(
+        "MCP_OAUTH_MODE=external requires MCP_OAUTH_IDP_ISSUER (the IdP's `iss` claim URL, e.g. https://your-tenant.auth0.com/)",
+      );
+    }
+    if (!jwksUrl) {
+      throw new Error(
+        "MCP_OAUTH_MODE=external requires MCP_OAUTH_IDP_JWKS_URL (the IdP's JWKS URL, discoverable from the IdP's /.well-known/openid-configuration)",
+      );
+    }
+    return createIssuerFactory({
+      mode: "external",
+      issuer: stripTrailingSlash(args.asConfig.issuer),
+      resource: args.resource,
+      idpIssuer,
+      jwksUrl,
+    });
+  }
+  return createIssuerFactory({
+    mode: "local",
+    issuer: stripTrailingSlash(args.asConfig.issuer),
+    resource: args.resource,
+    tokenTtlSeconds: args.tokenTtlSeconds,
+    defaultSubject: args.defaultSubject,
+  });
+}
+
+function stripTrailingSlash(s: string): string {
+  return s.endsWith("/") ? s.slice(0, -1) : s;
+}
