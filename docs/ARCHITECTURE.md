@@ -45,10 +45,16 @@ The full verified surface map is in [`PRODUCT_SURFACE.md`](PRODUCT_SURFACE.md). 
 
 ## Architecture Layers
 
+The lab is structured as a universal MCP server with the ChatGPT
+Apps SDK as an opt-in upper layer. Every layer is independently
+useful and testable.
+
+### Universal MCP layer (works with any MCP client)
+
 | Module | Responsibility |
 | --- | --- |
-| `src/server/index.ts` | `main()` — binds `127.0.0.1:MCP_PORT`, prints demo-mode banner when `MCP_AUTH_TOKEN` unset |
-| `src/server/app.ts` | `createMcpServer()` + `createHttpMcpApp()` factories; `unhandledRejection` capture for MCP SDK recursion bug; well-known route |
+| `src/server/index.ts` | `main()` — picks transport by `MCP_TRANSPORT` (`http` default, `stdio` for local clients); DEMO-ONLY banner when `MCP_AUTH_TOKEN` unset (HTTP mode only) |
+| `src/server/app.ts` | `createMcpServer()` + `createHttpMcpApp()` factories; `unhandledRejection` capture for MCP SDK recursion bug; well-known route; CORS allowlist (chatgpt.com, chat.openai.com, plus `CORS_ORIGIN`) |
 | `src/server/anotator8-adapter.ts` | Parse raw project data, normalize domain model, validate known fields, preserve unknowns; exports `parseYouTubeVideoId` matching Anotator8's 5 patterns |
 | `src/server/schemas.ts` | Zod input/output schemas for every tool |
 | `src/server/auth.ts` | Bearer auth (RFC 6750), comma-separated tokens, 401/403 + `WWW-Authenticate`; integrates OAuth metadata URL on challenge |
@@ -56,13 +62,28 @@ The full verified surface map is in [`PRODUCT_SURFACE.md`](PRODUCT_SURFACE.md). 
 | `src/server/audit.ts` | Stderr JSON lines, Bearer + `MCP_AUTH_TOKEN` redaction, 500-char summary cap |
 | `src/server/errors.ts` | `IntegrationError` with typed codes |
 | `src/server/storage.ts` | `loadProjectInput()` — `projectData` OR allowlisted `fixtureId` |
-| `src/server/tools/*` | 8 typed read-only tool handlers; `wrapTool()` adds audit + error envelope |
+| `src/server/tools/*` | 8 typed read-only tool handlers; `wrapTool()` adds audit + error envelope; all declared `readOnlyHint: true` |
 | `src/server/prompts/review-project-prompt.ts` | `review_anotator8_project` prompt with `focus` enum |
-| `src/server/resources/widget-resource.ts` | `ui://anotator8/review-widget.html` with CSP |
-| `src/widget/*` | Review/control panel; MCP Apps host bridge (primary) + legacy `window.openai.callTool` (fallback) |
 | `src/shared/types.ts` | Anotator8 domain + integration model |
-| `fixtures/*` | Synthetic Anotator8-like project file with intentional validation warnings |
+| `fixtures/*` | Synthetic Anotator8-like project file with intentional validation warnings + deterministic near-real generator (`npm run gen:fixture`) |
 | `tests/*` | Unit, integration, contract, smoke |
+
+### ChatGPT Apps SDK layer (upper, opt-in)
+
+| Module | Responsibility |
+| --- | --- |
+| `src/server/app.ts` | `registerAppTool` wraps every tool with Apps-SDK `_meta.ui.resourceUri` + `visibility: ["model", "app"]`; safe for non-ChatGPT clients (they ignore `_meta`) |
+| `src/server/resources/widget-resource.ts` | `ui://anotator8/review-widget.html` with CSP |
+| `src/widget/*` | Review/control panel; MCP Apps host bridge (primary, `protocolVersion: 2026-01-26`) + legacy `window.openai.callTool` (fallback) |
+
+### Build + entry point
+
+| File | Responsibility |
+| --- | --- |
+| `tsconfig.json` | IDE / vitest config; loose includes for tests and scripts |
+| `tsconfig.build.json` | Production build: `rootDir: ./src`, `include: ["src/**/*"]`, outputs `dist/server/index.js` (not `dist/src/...`) |
+| `package.json` | `build` = `build:clean` + `tsc -p tsconfig.build.json`; `pretest` = `npm run build`; entry guard uses `pathToFileURL(process.argv[1])` (Windows-safe) |
+| `dist/` | Tracked as gitignored build artifact; never committed |
 
 ## Widget Scope
 
@@ -78,8 +99,9 @@ The full verified surface map is in [`PRODUCT_SURFACE.md`](PRODUCT_SURFACE.md). 
 ## Transport and Protocol Versions
 
 | Layer | Version | Evidence |
-| --- | --- | --- |
-| MCP protocol | 2025-06-18 | Smoke test declares it in `initialize`; MCP spec |
+| --- | --- |
+| MCP protocol | 2025-06-18 | Smoke + stdio roundtrip declare it in `initialize`; MCP spec |
+| MCP transports | Streamable HTTP (default) + stdio (opt-in via `MCP_TRANSPORT=stdio`) | `src/server/index.ts:8-25`; `tests/integration/stdio-transport.test.ts` |
 | Apps SDK bridge | 2026-01-26 | Widget TS declares `BRIDGE_PROTOCOL_VERSION = "2026-01-26"`; OpenAI Apps SDK quickstart |
 | OAuth Protected Resource Metadata | RFC 9728 (April 2025) | `/.well-known/oauth-protected-resource[/<path>]` served at v0.3.0; integration test asserts shape |
 | OAuth Bearer | RFC 6750 (October 2012) | `WWW-Authenticate: Bearer realm=..., error=..., resource_metadata=...` on 401/403 |

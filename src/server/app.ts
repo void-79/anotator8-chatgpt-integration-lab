@@ -41,7 +41,7 @@ function captureUnhandledRejection(reason: unknown): void {
 process.on("unhandledRejection", captureUnhandledRejection);
 
 const SERVER_NAME = "anotator8-chatgpt-integration-lab";
-const SERVER_VERSION = "0.3.0";
+const SERVER_VERSION = "0.4.0";
 
 const instructions = [
   "External Anotator8 ChatGPT integration lab.",

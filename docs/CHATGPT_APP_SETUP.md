@@ -1,17 +1,37 @@
 # ChatGPT App Setup
 
+This doc covers the **ChatGPT-specific** setup. The lab is
+**first** a universal MCP 2025-06-18 server and **secondly** a
+ChatGPT Apps SDK target — see `docs/MCP_COMPATIBILITY.md` for the
+client matrix and `docs/ARCHITECTURE.md` for the layer split.
+
+## Two layers, one server
+
+| Layer | Used by | Always on? | Doc |
+| --- | --- | --- | --- |
+| **Universal MCP** (Streamable HTTP + stdio) | Claude Desktop, Cursor, Windsurf, Cline, OpenCode, Aider, Continue, MCP Inspector, anything else speaking MCP 2025-06-18 | ✅ | This file § Local + § Local clients |
+| **ChatGPT Apps SDK** (postMessage bridge, widget HTML, `_meta.ui`) | ChatGPT (Developer Mode + App Store) | ✅ upper layer, harmless to non-ChatGPT clients | This file § ChatGPT Developer Mode |
+
+The two layers are independent. You can use the lab with only the
+universal layer (e.g. with Claude Desktop) — the Apps SDK widgets
+will be served as plain resources and ignored. Conversely, ChatGPT
+uses the Apps SDK upper layer; it still talks MCP 2025-06-18 under
+the hood.
+
 ## Local
 
 ```powershell
 npm install
-npm run dev
+npm run build
+npm run dev          # Streamable HTTP on http://127.0.0.1:8787/mcp
+npm run demo:stdio   # full MCP protocol roundtrip over stdio
+npm run demo:oauth   # live OAuth PRM endpoint evidence
 ```
 
-Local MCP endpoint:
-
-```text
-http://127.0.0.1:8787/mcp
-```
+For local stdio clients (Claude Desktop, Cursor, Windsurf, Cline,
+OpenCode, Aider, Continue, GitHub Copilot in VS Code), point them
+at the **built** `dist/server/index.js` with `MCP_TRANSPORT=stdio`.
+See **§ Local clients (stdio)** below.
 
 Localhost is useful for MCP Inspector, not direct ChatGPT connection.
 
@@ -29,6 +49,78 @@ In Inspector, use:
 ```
 
 for `inspect_project`, `validate_project`, and other fixture-aware tools.
+
+## Local clients (stdio)
+
+The same `dist/server/index.js` is what every local stdio MCP
+client spawns. Set `MCP_TRANSPORT=stdio` in the client's config
+(most clients merge `env` from the config into the spawn
+environment).
+
+### Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config
+.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json`
+(Windows):
+
+```json
+{
+  "mcpServers": {
+    "anotator8": {
+      "command": "node",
+      "args": [
+        "C:\\anotator8-chatgpt-integration-lab\\dist\\server\\index.js"
+      ],
+      "env": { "MCP_TRANSPORT": "stdio" }
+    }
+  }
+}
+```
+
+### Cursor / Windsurf / Cline (VS Code) / OpenCode / Continue
+
+Edit `.cursor/mcp.json`, `~/.codeium/windsurf/mcp.json`,
+`.vscode/mcp.json`, or equivalent:
+
+```json
+{
+  "mcpServers": {
+    "anotator8": {
+      "command": "node",
+      "args": [
+        "C:\\anotator8-chatgpt-integration-lab\\dist\\server\\index.js"
+      ],
+      "env": { "MCP_TRANSPORT": "stdio" }
+    }
+  }
+}
+```
+
+(Use forward slashes or escaped backslashes per JSON rules; the
+example shows the Windows path. On macOS / Linux, replace with
+`/Users/...` or `/home/...`.)
+
+### Aider
+
+In `~/.aider.conf.yml`:
+
+```yaml
+mcp-servers:
+  - name: anotator8
+    command: node
+    args: ["C:\\anotator8-chatgpt-integration-lab\\dist\\server\\index.js"]
+    env:
+      MCP_TRANSPORT: stdio
+```
+
+### Verification
+
+After restarting the host app, run `npm run demo:stdio` from the
+lab to confirm the lab's own stdio transport is healthy, and use
+the host app's MCP diagnostic view to confirm the client can
+reach the server. `tests/integration/stdio-transport.test.ts`
+asserts the same protocol roundtrip end-to-end (spawn, initialize,
+tools/list, tools/call).
 
 ## ChatGPT Developer Mode
 

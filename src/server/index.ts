@@ -1,8 +1,46 @@
-import { createHttpMcpApp, SERVER_NAME, SERVER_VERSION } from "./app.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { pathToFileURL } from "node:url";
+import { createHttpMcpApp, createMcpServer, SERVER_NAME, SERVER_VERSION } from "./app.js";
 
 export { createMcpServer, createHttpMcpApp } from "./app.js";
 
-export function main(): void {
+/**
+ * Run the server. Transport is selected by `MCP_TRANSPORT`:
+ *   - "http"  (default): Streamable HTTP on /mcp, OAuth 2.0 PRM,
+ *     Bearer auth, CORS. Back-compat with v0.3.0.
+ *   - "stdio": JSON-RPC over process.stdin/stdout. For local MCP
+ *     clients (Claude Desktop, Cursor, Windsurf, Cline, OpenCode,
+ *     Aider, Continue, GitHub Copilot in VS Code).
+ *
+ * In stdio mode `MCP_AUTH_TOKEN` is ignored (no HTTP request to
+ * authenticate) — local trust is delegated to the OS user / process
+ * boundary. Tools remain read-only so the worst case is information
+ * disclosure of the supplied project JSON, same as HTTP demo mode
+ * without a token.
+ */
+export async function main(): Promise<void> {
+  const transportKind = (process.env.MCP_TRANSPORT ?? "http").toLowerCase();
+
+  if (transportKind === "stdio") {
+    if (process.env.MCP_AUTH_TOKEN) {
+      process.stderr.write(
+        "Note: MCP_AUTH_TOKEN is ignored in stdio mode (no HTTP request to authenticate). " +
+          "Local trust comes from the OS process boundary.\n",
+      );
+    }
+    const server = createMcpServer();
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    process.stderr.write(`${SERVER_NAME} ${SERVER_VERSION} running on stdio\n`);
+    return;
+  }
+
+  if (transportKind !== "http") {
+    process.stderr.write(
+      `Unknown MCP_TRANSPORT="${transportKind}"; expected "http" or "stdio". Falling back to http.\n`,
+    );
+  }
+
   const host = process.env.MCP_HOST ?? "127.0.0.1";
   const port = Number.parseInt(process.env.MCP_PORT ?? "8787", 10);
   const { httpServer, transports } = createHttpMcpApp();
@@ -39,6 +77,6 @@ export function main(): void {
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, "/")}`) {
-  main();
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  void main();
 }
