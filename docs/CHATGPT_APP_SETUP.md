@@ -201,3 +201,23 @@ WWW-Authenticate: Bearer realm="anotator8-chatgpt-lab",
 | **Secure MCP Tunnel** | OpenAI-managed | `tunnel-client` CLI | Persistent profile | Documented in prototype README; not verified in this lab. |
 | **VPS + nginx + certbot** | $5–10/mo | DNS + certbot + reverse proxy | Permanent | Best for production; needs OAuth. |
 
+## Headless MCP Inspector Smoke (CI-friendly, added in v0.6.0)
+
+`npm run inspect` opens the interactive MCP Inspector UI in a browser — that requires a workstation with a display. For CI hosts (or for any local check where you don't want to spawn a browser), use the headless equivalent:
+
+```powershell
+npm run verify:dev
+```
+
+It boots the same HTTP MCP app the Inspector would point at, drives the Streamable HTTP transport with the same five steps a manual Inspector session performs:
+
+1. `initialize` (asserts `serverInfo.name` matches the lab name)
+2. `notifications/initialized` (asserts 200 or 202 per MCP 2025-06-18)
+3. `tools/list` (asserts all 8 expected tools are present and all declare `readOnlyHint: true`)
+4. `tools/call` of `inspect_project` on the `sample-project` fixture (asserts `ok: true`)
+5. `resources/list` (asserts the widget HTML is reachable at `ui://anotator8/review-widget.html`)
+
+It clears `MCP_AUTH_TOKEN` for its own process, so it works in local demo mode (no Bearer header) — matching what the interactive Inspector does when pointed at a localhost server. The script is included in `npm run verify` (now 7/7) so every CI run also gets this proof.
+
+If `verify:dev` fails but `smoke` passes, the most likely cause is a recent change to a tool's `annotations` block (the headless script asserts `readOnlyHint: true` for every registered tool).
+
