@@ -50,10 +50,26 @@ async function main(): Promise<void> {
   await new Promise<void>((resolve) => httpServer.listen(0, "127.0.0.1", resolve));
   const address = httpServer.address();
   assert(address && typeof address === "object", "server should have a bound address");
-  const url = `http://127.0.0.1:${address.port}/mcp`;
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const url = `${baseUrl}/mcp`;
   evidence.push(`server url=${url}`);
 
   try {
+    // OAuth 2.0 Protected Resource Metadata (RFC 9728). Verify the
+    // well-known endpoint is served and the `resource` field round-trips.
+    const wellKnownRes = await fetch(`${baseUrl}/.well-known/oauth-protected-resource/mcp`);
+    assert(wellKnownRes.status === 200, `well-known should be 200, got ${wellKnownRes.status}`);
+    assert(
+      wellKnownRes.headers.get("content-type")?.includes("application/json"),
+      `well-known content-type should be json, got ${wellKnownRes.headers.get("content-type")}`,
+    );
+    const wellKnownDoc = (await wellKnownRes.json()) as { resource: string; bearer_methods_supported?: string[] };
+    assert(typeof wellKnownDoc.resource === "string" && wellKnownDoc.resource.endsWith("/mcp"),
+      `well-known resource field should end with /mcp, got ${wellKnownDoc.resource}`);
+    assert(Array.isArray(wellKnownDoc.bearer_methods_supported) && wellKnownDoc.bearer_methods_supported.includes("header"),
+      "well-known should declare header as a supported bearer method");
+    evidence.push(`oauth resource=${wellKnownDoc.resource} bearer=${wellKnownDoc.bearer_methods_supported.join(",")}`);
+
     const init = await rpc(url, {
       jsonrpc: "2.0",
       id: 1,
