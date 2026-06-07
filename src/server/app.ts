@@ -6,7 +6,7 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { toolRegistry } from "./tools/index.js";
 import { widgetResourceUri, registerWidgetResource } from "./resources/widget-resource.js";
 import { registerReviewProjectPrompt } from "./prompts/review-project-prompt.js";
-import { requireBearerAuth } from "./auth.js";
+import { checkAuth } from "./auth.js";
 import { audit } from "./audit.js";
 import { IntegrationError } from "./errors.js";
 import {
@@ -18,6 +18,11 @@ import {
   writeProtectedResourceMetadataResponse,
   type OAuthFoundationConfig,
 } from "./oauth/protected-resource-metadata.js";
+import { createAsHandlers, type AsHandlerBundle } from "./oauth/as-handlers.js";
+import {
+  loadAuthorizationServerConfig,
+} from "./oauth/authorization-server-metadata.js";
+import { loadSecuritySchemesConfig } from "./oauth/security-schemes.js";
 
 // Upstream MCP SDK 1.29.0 + ext-apps 1.7.4 has a known recursion bug on
 // `transport.onclose → server.close` when Streamable HTTP receives certain
@@ -41,7 +46,7 @@ function captureUnhandledRejection(reason: unknown): void {
 process.on("unhandledRejection", captureUnhandledRejection);
 
 const SERVER_NAME = "anotator8-chatgpt-integration-lab";
-const SERVER_VERSION = "0.6.0";
+const SERVER_VERSION = "0.7.0";
 
 const instructions = [
   "External Anotator8 ChatGPT integration lab.",
@@ -118,6 +123,17 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
 export function createHttpMcpApp() {
   const transports = new Map<string, { transport: StreamableHTTPServerTransport; server: McpServer }>();
   const oauthConfig = loadOAuthConfig();
+  const securitySchemes = loadSecuritySchemesConfig();
+  const asConfig = loadAuthorizationServerConfig();
+  const cimdAllowlist = (process.env.MCP_OAUTH_CIMD_ALLOWLIST ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const asHandlers: AsHandlerBundle = createAsHandlers({
+    asConfig,
+    resource: oauthConfig.resource,
+    defaultSubject: process.env.MCP_OAUTH_DEFAULT_SUBJECT?.trim() || "demo-user",
+    tokenTtlSeconds: Number(process.env.MCP_OAUTH_TOKEN_TTL ?? "900"),
+    cimdAllowInsecureHttp: asConfig.allowInsecureHttp,
+    cimdAllowlistHostnames: cimdAllowlist,
+  });
 
   const httpServer = createHttpServer(async (req, res) => {
     try {
@@ -169,11 +185,28 @@ export function createHttpMcpApp() {
         writeProtectedResourceMetadataResponse(res, doc);
         return;
       }
+      // v0.7.0: Authorization Server (RFC 8414) + JWKS + AS endpoints.
+      if (req.url) {
+        let url: URL;
+        try { url = new URL(req.url, `http://${req.headers.host ?? hostEnvFallback()}`); } catch { url = new URL("http://invalid/"); }
+        const asResult = await asHandlers.handle(req, res, url);
+        if (asResult.handled) return;
+      }
       if (req.url !== "/mcp") {
         writeJson(res, 404, { error: "not_found" });
         return;
       }
-      if (!requireBearerAuth(req, res, oauthConfig)) return;
+      // For /mcp: enforce Bearer auth (JWT or static) when configured.
+      const result = checkAuth(req, oauthConfig, securitySchemes, asHandlers.tokenIssuer, undefined);
+      if (!result.ok) {
+        const status = result.challenge?.includes('error="invalid_token"') ? 403 : 401;
+        res.writeHead(status, {
+          "content-type": "application/json",
+          "WWW-Authenticate": result.challenge!,
+        });
+        res.end(JSON.stringify({ error: "Missing or invalid Bearer token" }));
+        return;
+      }
 
       const sessionId = req.headers["mcp-session-id"];
       let session = typeof sessionId === "string" ? transports.get(sessionId) : undefined;
@@ -210,7 +243,7 @@ export function createHttpMcpApp() {
     }
   });
 
-  return { httpServer, transports, oauthConfig };
+  return { httpServer, transports, oauthConfig, asHandlers, securitySchemes };
 }
 
 export { SERVER_NAME, SERVER_VERSION };
