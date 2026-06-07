@@ -3,11 +3,11 @@
 **Lab folder:** `C:\anotator8-chatgpt-integration-lab\`
 **Anotator8 repo:** `C:\Anotator8\` (untouched — zero edits inside; only the lab was touched)
 **Old prototype:** `C:\chat-gpt-mcp-app\` (inspected read-only, see `docs/PROTOTYPE_AUDIT.md`)
-**Lab version:** 0.3.0
+**Lab version:** 0.4.0
 **Last re-verified:** 2026-06-07
 **MCP SDK:** `@modelcontextprotocol/sdk@1.29.0` + `@modelcontextprotocol/ext-apps@1.7.4`
 
-**Status:** Build clean, **116/116** tests pass across **16** files, smoke **PASS** (now includes an OAuth discovery check on `/.well-known/oauth-protected-resource/mcp`), **8** read-only tools, MCP Inspector via `npm run inspect`. **Zero unhandled rejections** in test output. **OAuth 2.0 Protected Resource Metadata (RFC 9728) foundation shipped.** **MCP Apps host bridge (2026-01-26) shipped as primary widget path with legacy `window.openai` fallback. Near-real fixture generator + CI workflow template added.**
+**Status:** Build clean, **118/118** tests pass across **17** files, smoke **PASS** (HTTP + OAuth PRM), `npm run demo:stdio` **PASS** (full MCP protocol roundtrip over stdio), **8** read-only tools, MCP Inspector via `npm run inspect`. **Zero unhandled rejections** in test output. **OAuth 2.0 Protected Resource Metadata (RFC 9728) foundation shipped.** **MCP Apps host bridge (2026-01-26) shipped as primary widget path with legacy `window.openai` fallback.** **STDIO transport added (v0.4.0) so the same server now works with Claude Desktop, Cursor, Windsurf, Cline, OpenCode, Aider, Continue, GitHub Copilot in VS Code, plus everything else that speaks MCP 2025-06-18.** See [`docs/MCP_COMPATIBILITY.md`](docs/MCP_COMPATIBILITY.md) for the full client × feature matrix.
 
 ---
 
