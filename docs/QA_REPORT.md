@@ -1,4 +1,13 @@
-# QA Report
+# QA Report (SUPERSEDED)
+
+> **Supersession notice (2026-06-07):** This document is from an earlier 0.2.0 build (14 tests, 8 files). It has been superseded by:
+> - [`../REPORT.md`](../REPORT.md) — current authoritative 0.2.1+ report (60 tests, 13 files, includes the new `auth-bypass`, `widget-bridge`, `youtube-patterns`, `rejection-capture` test files)
+> - [`../docs/research/OFFICIAL_DOCS_RESEARCH.md`](research/OFFICIAL_DOCS_RESEARCH.md) — updated research table
+> - [`../docs/PROTOTYPE_AUDIT.md`](PROTOTYPE_AUDIT.md) — extended prototype audit
+>
+> Kept for historical reference. Numbers in the body below are **stale**; do not cite as current.
+
+---
 
 ## Official Docs Research
 

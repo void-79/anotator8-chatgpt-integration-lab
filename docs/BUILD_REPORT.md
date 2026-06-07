@@ -1,4 +1,14 @@
-# Anotator8 ChatGPT Integration Lab — Final Build Report
+# Anotator8 ChatGPT Integration Lab — Build Report (SUPERSEDED)
+
+> **Supersession notice (2026-06-07):** This document is from an earlier 0.2.0 build (Express-based, 126 tests). It has been superseded by:
+> - [`../REPORT.md`](../REPORT.md) — current authoritative 0.2.1+ build report (raw HTTP, 60 tests, 13 files)
+> - [`../docs/research/OFFICIAL_DOCS_RESEARCH.md`](research/OFFICIAL_DOCS_RESEARCH.md) — updated Apps SDK + MCP research
+> - [`../docs/PRODUCT_SURFACE.md`](PRODUCT_SURFACE.md) — verified Anotator8 product surface
+> - [`../docs/PROTOTYPE_AUDIT.md`](PROTOTYPE_AUDIT.md) — old prototype audit
+>
+> Kept for historical reference. Numbers in the body below are **stale**; do not cite as current.
+
+---
 
 **Version:** 0.2.0
 **Date:** 2026-06-06

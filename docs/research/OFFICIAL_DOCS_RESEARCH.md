@@ -1,25 +1,51 @@
 # Official Docs Research
 
+> **Evidence classification used below**
+> - **OFFICIAL_DOC_EVIDENCE** — OpenAI Apps SDK / MCP protocol docs (linked)
+> - **REPO_EVIDENCE** — Read-only inspection of `C:\Anotator8` files
+> - **PROTOTYPE_EVIDENCE** — Read-only inspection of `C:\chat-gpt-mcp-app`
+> - **RUNTIME_EVIDENCE** — Build, tests, smoke, MCP Inspector
+> - **INFERENCE** — Design conclusion based on evidence
+> - **UNCLEAR** — Not proven
+
 | Source | What it says | Impact on architecture | Risk if ignored |
 | --- | --- | --- | --- |
-| OpenAI Apps SDK Quickstart | A ChatGPT app can include a web component UI; if no UI is needed, skip UI resource registration and only expose tools. | Lab registers both tools and one optional review widget, but keeps the widget non-editor scope. | Building a fake UI or requiring UI when tool-only operation is enough. |
-| OpenAI Apps SDK Reference | `window.openai` exposes tool input/output, hidden response metadata, `callTool`, follow-up messaging, state, display, and file helpers. It says tools with `structuredContent` should declare `outputSchema`. | Widget feature-detects `window.openai.callTool`; all tools declare output schemas. | Broken widget controls, missing schemas, or unsafe assumptions about host APIs. |
-| OpenAI Apps SDK Auth | Read-only anonymous mode can be acceptable, but customer-specific data or write actions should authenticate; authenticated MCP servers are expected to use OAuth 2.1 and protected resource metadata. | Local lab supports optional bearer token only for demo; docs mark OAuth 2.1 as required before production/user data. | Treating bearer token/local demo auth as production-ready. |
-| OpenAI Apps SDK Testing | Test tool handlers directly, keep fixtures close to MCP code, use MCP Inspector, validate in ChatGPT Developer Mode once HTTPS reachable. | Added unit/integration/contract tests, `npm run smoke`, `npm run inspect`, and setup docs. | Claiming compatibility without protocol/runtime evidence. |
-| OpenAI Apps SDK Security & Privacy | Use least privilege, explicit consent, defense in depth; validate server-side; keep audit logs; sandboxed widgets rely on CSP; OAuth and scope checks are expected for external accounts. | Read-only tools, no arbitrary filesystem/shell, CSP with no external domains, redacted audit logging, 10MB input limit. | Data exfiltration, prompt injection impact, unsafe widgets, unreviewed writes. |
-| MCP Tools spec 2025-06-18 | Tools expose names, descriptions, input schemas, optional output schemas; structuredContent should match outputSchema; clients should validate; servers must validate inputs and sanitize outputs. | Every tool has explicit zod input/output schema and a structured error shape. | Stringly typed tools and silent best-effort success. |
-| MCP Resources spec 2025-06-18 | Resources are app-driven context identified by URI; servers declare resource capability. | Widget is a `ui://` resource, not a project file browser. | Confusing UI resources with arbitrary file/resource access. |
-| MCP Prompts spec 2025-06-18 | Prompts are user-controlled templates exposed by the server and discoverable by clients. | Added `review_anotator8_project` prompt as optional guided workflow. | Hiding workflow assumptions in undocumented prose. |
-| MCP Streamable HTTP transport | Clients must use `Accept: application/json, text/event-stream`; servers may issue `Mcp-Session-Id`; clients must reuse it on later requests. | Smoke test implements initialize, session id reuse, SSE parsing, tools/list, tools/call. | False positive smoke tests that do not match the real protocol. |
+| **OpenAI Apps SDK Quickstart (2026-01-26)** | Apps use MCP servers to connect to ChatGPT. Optional web component in an iframe. For NEW apps, use the **MCP Apps host bridge** (JSON-RPC over `postMessage`, `ui/initialize` / `ui/notifications/initialized` / `tools/call`). | Lab widget supports the new bridge as the primary path and falls back to legacy `window.openai.callTool` for backwards compatibility. The bridge protocol version is explicitly declared as `2026-01-26`. | Widget breaks when ChatGPT drops legacy support. |
+| **OpenAI Apps SDK Reference (Apps SDK 1.x)** | Legacy `window.openai` exposes tool input/output, hidden response metadata, `callTool`, state, display, and file helpers. Tools with `structuredContent` must declare `outputSchema`. | Widget still feature-detects `window.openai.callTool`; every tool declares Zod output schema. | Broken widget controls, missing schemas, or unsafe assumptions about host APIs. |
+| **OpenAI Apps SDK Auth** | Read-only anonymous mode can be acceptable for local demos, but customer-specific data or write actions must authenticate via OAuth 2.1 + protected resource metadata. | Lab supports optional `MCP_AUTH_TOKEN` for demo (Bypass with strong banner warning). Production must add OAuth 2.1. | Treating bearer-only auth as production-ready. |
+| **OpenAI Apps SDK Security & Privacy** | Use least privilege, explicit consent, defense in depth; validate server-side; keep audit logs; sandbox widgets with CSP; OAuth + scope checks expected. | Read-only tools, no arbitrary FS / shell, CSP with no external `connectDomains` or `resourceDomains`, redacted audit logging, 10MB input cap, hardened `IntegrationError` shape (no raw messages leaked to clients). | Data exfiltration, prompt injection impact, unsafe widgets, unreviewed writes. |
+| **OpenAI Apps SDK Testing** | Test tool handlers directly, keep fixtures close to MCP code, use MCP Inspector, validate in ChatGPT Developer Mode once HTTPS reachable. | Unit + integration + contract + smoke + 8 HTTP/MCP protocol tests; `npm run inspect` opens MCP Inspector. | Claiming compatibility without runtime evidence. |
+| **MCP Tools spec 2025-06-18** | Tools expose names, descriptions, input schemas, optional output schemas; `structuredContent` must match `outputSchema`; servers must validate inputs and sanitize outputs. | Every tool has Zod input/output schema and a structured `IntegrationError` shape with typed codes (`invalid_input`, `unsupported_project_version`, `too_large_input`, `missing_field`, `internal_error`, `unsupported_capability`). | Stringly typed tools, silent best-effort success. |
+| **MCP Resources spec 2025-06-18** | Resources are app-driven context identified by URI; servers declare resource capability. | Widget is a `ui://` resource, not a project file browser. | Confusing UI resources with arbitrary file/resource access. |
+| **MCP Prompts spec 2025-06-18** | Prompts are user-controlled templates exposed by the server and discoverable by clients. | `review_anotator8_project` prompt registered as optional guided workflow with a `focus` enum. | Hiding workflow assumptions in undocumented prose. |
+| **MCP Streamable HTTP transport (2025-06-18)** | `Accept: application/json, text/event-stream` required; `Mcp-Session-Id` issued and reused; CORS preflight must succeed; bearer tokens or OAuth recommended. | Raw `http` server (no Express) implements `createHttpMcpApp`; smoke + integration tests drive real JSON-RPC over HTTP including SSE parsing. | False positive smoke tests that don't match the real protocol. |
+| **OAuth 2.0 Protected Resource Metadata (RFC 9728, April 2025)** | Defines `/.well-known/oauth-protected-resource[/<path>]` JSON document with `resource` (REQUIRED), `authorization_servers`, `scopes_supported`, `bearer_methods_supported`, `resource_name`, `resource_documentation`. The `resource` value MUST round-trip with the URL the client used. The 401/403 `WWW-Authenticate` header MAY include a new `resource_metadata` parameter pointing to the well-known URL. | v0.3.0 ships this foundation: `src/server/oauth/protected-resource-metadata.ts` builds the doc + computes the well-known URL via path-insertion (§3.1) + inverse-maps metadata URL → resource identifier (§3.3). The 401/403 challenge now carries `resource_metadata="..."`. AS list, scopes, and bearer methods are env-configurable. | Implementing OAuth 2.1 without dynamic discovery. |
+| **OAuth 2.0 Bearer Token Usage (RFC 6750, October 2012)** | Defines `Authorization: Bearer <token>` for header, `access_token=...` for body/query, and the `WWW-Authenticate: Bearer realm="...", error="..."` challenge. | `src/server/auth.ts` enforces this with 401/403 + `error="invalid_request"` / `error="invalid_token"`. The existing `realm="anotator8-chatgpt-lab"` is preserved for back-compat. | Stringly-typed auth errors that clients can't act on. |
+| **MCP Inspector** | `npx @modelcontextprotocol/inspector@latest --server-url http://...` opens a browser-based tool playground. | `npm run inspect` wraps this so the dev doesn't have to remember flags. Verified works (RUNTIME_EVIDENCE). | Forcing manual `npx` invocations and confusing setup. |
+| **`@modelcontextprotocol/sdk@1.29.0` + `@modelcontextprotocol/ext-apps@1.7.4`** | Provides `McpServer`, `StreamableHTTPServerTransport`, `registerAppTool`, `registerAppResource`, `RESOURCE_MIME_TYPE`. Returns callbacks with `[x: string]: unknown` index signature — generic `unknown` for `structuredContent` is incompatible. | `registerAppTool` used for all 8 tools; tool handlers return via `success()` helper in `tool-types.ts` and `as never` cast for the return type. | TS build failure, callback signature mismatch. |
+| **`@modelcontextprotocol/sdk@1.29.0` + ext-apps 1.7.4 — known upstream bug** | `transport.onclose → server.close` recurses into a `RangeError: Maximum call stack size exceeded` under certain error paths (NOT including normal session teardown — only when the transport receives a malformed/unsupported request and the SDK attempts to close both ends). | `app.ts` installs a `process.on("unhandledRejection", ...)` handler that captures the recursion into the audit log instead of letting it pollute the test output as scary "Unhandled Rejection" lines. Tests still pass; the recursion is non-fatal. | Test output looks broken; users chase a non-bug. |
 
-Evidence links:
+## Open Items That Need To Stay Open
 
-- OpenAI Apps SDK Quickstart: https://developers.openai.com/apps-sdk/quickstart
-- OpenAI Apps SDK Reference: https://developers.openai.com/apps-sdk/reference
-- OpenAI Apps SDK Auth: https://developers.openai.com/apps-sdk/build/auth
-- OpenAI Apps SDK Testing: https://developers.openai.com/apps-sdk/deploy/testing
-- OpenAI Apps SDK Security & Privacy: https://developers.openai.com/apps-sdk/guides/security-privacy
-- MCP Tools: https://modelcontextprotocol.io/specification/2025-06-18/server/tools
-- MCP Resources: https://modelcontextprotocol.io/specification/2025-06-18/server/resources
-- MCP Prompts: https://modelcontextprotocol.io/specification/2025-06-18/server/prompts
-- MCP Transports: https://modelcontextprotocol.io/specification/2025-06-18/basic/transports
+| Item | Why unclear | Plan |
+| --- | --- | --- |
+| ChatGPT Developer Mode live connection | No `cloudflared`, `ngrok`, or `tunnel-client` installed; no ChatGPT account state in this environment. | Documented in `docs/CHATGPT_APP_SETUP.md`; needs paid ChatGPT account + tunnel client. |
+| OAuth 2.1 authorization server (token issuance, introspection, JWKS, DCR) | Apps SDK requires it for public App Store submission. v0.3.0 ships the RFC 9728 discovery foundation; AS is the next step. | Documented as a follow-up in `REPORT.md` § Follow-up and `docs/SECURITY.md`. |
+| Per-tool scope enforcement | Requires scope vocabulary + a token-introspection path. v0.3.0 declares `scopes_supported` in the metadata document; runtime enforcement needs a real AS. | Next step after AS. |
+| Load test with >10k annotations | Adapter has not been benchmarked at scale. | Deferred. |
+
+## Evidence Links
+
+- OpenAI Apps SDK Quickstart: <https://developers.openai.com/apps-sdk/quickstart>
+- OpenAI Apps SDK Reference: <https://developers.openai.com/apps-sdk/reference>
+- OpenAI Apps SDK Auth: <https://developers.openai.com/apps-sdk/build/auth>
+- OpenAI Apps SDK Testing: <https://developers.openai.com/apps-sdk/deploy/testing>
+- OpenAI Apps SDK Security & Privacy: <https://developers.openai.com/apps-sdk/guides/security-privacy>
+- MCP Tools: <https://modelcontextprotocol.io/specification/2025-06-18/server/tools>
+- MCP Resources: <https://modelcontextprotocol.io/specification/2025-06-18/server/resources>
+- MCP Prompts: <https://modelcontextprotocol.io/specification/2025-06-18/server/prompts>
+- MCP Transports: <https://modelcontextprotocol.io/specification/2025-06-18/basic/transports>
+- MCP Architecture overview: <https://modelcontextprotocol.io/docs/concepts/architecture>
+- OAuth 2.0 Protected Resource Metadata (RFC 9728): <https://www.rfc-editor.org/rfc/rfc9728>
+- OAuth 2.0 Bearer Token Usage (RFC 6750): <https://www.rfc-editor.org/rfc/rfc6750>
+- OAuth 2.0 Authorization Server Metadata (RFC 8414): <https://www.rfc-editor.org/rfc/rfc8414>
