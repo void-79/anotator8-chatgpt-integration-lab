@@ -18,6 +18,7 @@
     "demo:stdio": "tsx scripts/stdio-smoke.ts",
     "pretest": "npm run build",
     "smoke": "tsx scripts/smoke.ts",
+    "verify": "tsx scripts/verify.ts",
     "inspect": "npx -y @modelcontextprotocol/inspector@latest --server-url http://127.0.0.1:8787/mcp --transport http",
     "typecheck": "tsc --noEmit"
   },

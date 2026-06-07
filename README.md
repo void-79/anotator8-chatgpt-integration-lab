@@ -1,5 +1,13 @@
 # Anotator8 x ChatGPT Integration Lab
 
+> **Хочешь просто запустить? → [QUICKSTART.md](QUICKSTART.md)** (3 шага + проверка)
+>
+> * `npm install && npm run build`
+> * `npm run verify` — 4/4 проверок: build, 118 тестов, HTTP smoke, stdio roundtrip
+> * Вставь config snippet из QUICKSTART в Claude Desktop / Cursor / любой MCP-клиент
+
+---
+
 External, read-only **universal MCP 2025-06-18** server with an
 **OpenAI Apps SDK 2026-01-26** upper layer for ChatGPT. Built
 to review Anotator8 project files from any MCP-speaking client —
