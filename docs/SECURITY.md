@@ -67,7 +67,7 @@ Project text, labels, subtitles, and unknown fields are untrusted. Mitigations:
 
 | Risk | Mitigation | Remaining concern |
 | --- | --- | --- |
-| In-process OAuth 2.1 AS (v0.7.0) is suitable for self-hosted demos only | PKCE S256 enforced; DCR + CIMD supported; JWT validation checks sig + iss + aud + exp + nbf + scope. | Production must cut over to a real IdP (Auth0 / Okta / Cognito / Stytch). See `docs/OAUTH_AS.md` for the cutover recipe. |
+| In-process OAuth 2.1 AS (v0.7.0) is suitable for self-hosted demos only | PKCE S256 enforced; DCR + CIMD supported; JWT validation checks sig + iss + aud + exp + nbf + scope. v0.8.0 adds a `local | external` mode switch so production can validate against a real IdP's JWKS without code changes. | In `local` mode the lab issues its own tokens. For production set `MCP_OAUTH_MODE=external` and point at a real IdP — see `docs/OAUTH_AS.md` for the cutover recipe (Auth0/Okta/Cognito/Stytch snippets included). |
 | Demo bearer auth is weaker than OAuth | `MCP_AUTH_TOKEN` env sets a static-token allowlist; `MCP_OAUTH_REQUIRE_AUTH=true` forces JWT auth. The startup banner is unmissable in demo mode. | Lab must not be exposed to the public internet without `MCP_OAUTH_REQUIRE_AUTH=true` AND a production IdP. |
 | Project JSON can contain sensitive education records | Read-only, no persistence, docs warn what ChatGPT sees. `isEducationRecord`, `dataResidency`, `ownerId`, `classroomId` are preserved as opaque fields. | User must decide whether to share project JSON with ChatGPT. |
 | Widget receives hidden `_meta.projectData` for focus buttons | CSP locked down; no external network domains. `textContent` only (no `innerHTML`). | Remove or reduce `_meta.projectData` before production if not strictly needed. |

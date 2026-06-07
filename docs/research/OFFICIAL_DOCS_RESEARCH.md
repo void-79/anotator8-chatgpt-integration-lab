@@ -32,7 +32,7 @@
 | ChatGPT Developer Mode live connection | No `cloudflared`, `ngrok`, or `tunnel-client` installed; no ChatGPT account state in this environment. | Documented in `docs/CHATGPT_APP_SETUP.md`; needs paid ChatGPT account + tunnel client. |
 | OAuth 2.1 authorization server (token issuance, introspection, JWKS, DCR, CIMD) | **Resolved in v0.7.0.** Implemented as an in-process AS with RS256 JWT, PKCE S256, DCR (RFC 7591), and CIMD (draft). See `docs/OAUTH_AS.md` for the design and cutover recipe. | n/a — the in-process AS is shipped. Production cutover is the remaining step. |
 | Per-tool scope enforcement | **Resolved in v0.7.0.** Per-tool `securitySchemes` are declared in `src/server/oauth/security-schemes.ts`; the validator checks `scope` claims on JWT validation. | n/a. |
-| Production IdP cutover | The in-process AS is suitable for self-hosted demos only. | Follow the [cutover recipe in OAUTH_AS.md](../OAUTH_AS.md#cutover-recipe-production-idp). |
+| Production IdP cutover | **Resolved in v0.8.0.** Added a `local | external` mode switch (`MCP_OAUTH_MODE`). External mode validates JWTs against a remote IdP's JWKS (`RemoteTokenValidator` in `src/server/oauth/remote-issuer.ts`); the in-process AS endpoints are gated to 404 with `as_disabled`. See `docs/OAUTH_AS.md` for Auth0/Okta/Cognito/Stytch snippets. | n/a — the cutover is a config change, not a code change. |
 | Load test with >10k annotations | Adapter has not been benchmarked at scale. | Deferred. |
 
 ## Evidence Links

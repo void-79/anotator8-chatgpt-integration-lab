@@ -1,8 +1,11 @@
-# In-Process OAuth 2.1 Authorization Server (v0.7.0)
+# In-Process OAuth 2.1 Authorization Server (v0.7.0) + Production IdP cutover (v0.8.0)
 
-> **Status:** Implemented and verified (v0.7.0, 2026-06-07).
+> **Status:** v0.7.0 in-process AS implemented and verified (2026-06-07).
+> v0.8.0 adds a `local | external` mode switch so the lab can
+> validate tokens against a production IdP (Auth0/Okta/Cognito/Stytch/Keycloak)
+> without code changes.
 > **Scope:** Read-only AS for the Anotator8 ChatGPT integration lab.
-> **Production use:** Not intended as a production IdP. Cut over to Auth0 / Okta / Cognito / Stytch before any real-user deployment. See [Cutover recipe](#cutover-recipe-production-idp).
+> **Production use:** Switch to `MCP_OAUTH_MODE=external` and point at a real IdP — see [Cutover recipe](#cutover-recipe-production-idp).
 
 ## What ships in v0.7.0
 
@@ -113,11 +116,14 @@ with `MCP_OAUTH_TOKEN_TTL` (seconds).
 
 | Env var | Default | Purpose |
 | --- | --- | --- |
-| `MCP_OAUTH_ISSUER` | `http://${MCP_HOST}:${MCP_PORT}` | The `iss` claim and the AS metadata `issuer` |
+| `MCP_OAUTH_MODE` | `local` | `local` (in-process AS) or `external` (validate IdP-issued JWTs) — **v0.8.0** |
+| `MCP_OAUTH_IDP_ISSUER` | (empty) | Required in external mode. The IdP's `iss` claim URL. **v0.8.0** |
+| `MCP_OAUTH_IDP_JWKS_URL` | (empty) | Required in external mode. The IdP's JWKS URL. **v0.8.0** |
+| `MCP_OAUTH_ISSUER` | `http://${MCP_HOST}:${MCP_PORT}` | The `iss` claim and the AS metadata `issuer`. In external mode MUST equal `MCP_OAUTH_IDP_ISSUER`. |
 | `MCP_OAUTH_SCOPES_SUPPORTED` | `mcp:read` | Comma-separated scopes advertised in AS metadata |
-| `MCP_OAUTH_DEFAULT_SUBJECT` | `demo-user` | The `sub` claim when none is provided |
+| `MCP_OAUTH_DEFAULT_SUBJECT` | `demo-user` | The `sub` claim when none is provided (local mode only) |
 | `MCP_OAUTH_DEFAULT_SCOPE` | `mcp:read` | Default scope when `MCP_OAUTH_REQUIRE_AUTH=true` |
-| `MCP_OAUTH_TOKEN_TTL` | `900` | Token lifetime in seconds |
+| `MCP_OAUTH_TOKEN_TTL` | `900` | Token lifetime in seconds (local mode only) |
 | `MCP_OAUTH_REQUIRE_AUTH` | `false` | Force every tool to require a Bearer JWT |
 | `MCP_OAUTH_CIMD_SUPPORTED` | `true` | Advertise `client_id_metadata_document_supported: true` |
 | `MCP_OAUTH_CIMD_ALLOWLIST` | (empty) | Comma-separated hostnames; CIMD URLs not on this list are rejected |
@@ -127,7 +133,7 @@ with `MCP_OAUTH_TOKEN_TTL` (seconds).
 
 ## Test coverage
 
-The implementation has ~70 new test cases across 7 test files:
+The implementation has ~86 new test cases across 9 test files (v0.7.0 + v0.8.0):
 
 - `tests/unit/oauth/pkce.test.ts` (10)
 - `tests/unit/oauth/jwks.test.ts` (8)
@@ -138,45 +144,129 @@ The implementation has ~70 new test cases across 7 test files:
 - `tests/unit/oauth/cimd.test.ts` (10)
 - `tests/unit/oauth/security-schemes.test.ts` (9)
 - `tests/integration/oauth/authorization-server.test.ts` (10)
+- `tests/unit/oauth/remote-issuer.test.ts` (7) **v0.8.0**
+- `tests/unit/oauth/issuer-factory.test.ts` (5) **v0.8.0**
+- `tests/integration/oauth/external-mode-as-disabled.test.ts` (4) **v0.8.0**
 
 Plus the end-to-end `npm run demo:oauth` script.
 
 ## Cutover recipe (production IdP)
 
-To swap the in-process AS for a production IdP (e.g. Auth0):
+### v0.8.0 — one-env-var cutover
+
+The lab now supports a `local | external` mode switch. Cutting over
+to a production IdP is a config change, not a code change.
 
 1. **Provision the IdP** — create an API and enable RBAC with the
-   scopes you need (`mcp:read`, etc.).
-2. **Set `MCP_OAUTH_ISSUER`** to the IdP's issuer URL.
-3. **Set `MCP_OAUTH_RESOURCE`** to the lab's resource URL.
-4. **Override the AS routes** — in `src/server/app.ts`, comment out
-   the `asHandlers.handle(req, res, url)` dispatch. Replace with a
-   passthrough that 404s the in-process AS routes so clients are
-   forced to use the IdP.
-5. **Update `src/server/auth.ts`** to call the IdP's `/userinfo` (or
-   equivalent) for `sub` extraction, instead of the in-process
-   `TokenIssuer.validate`.
-6. **Update the tests** that assert the in-process AS endpoints
-   exist (`tests/integration/oauth/authorization-server.test.ts`,
-   `scripts/oauth-demo.ts`). They become "AS external" tests that
-   hit the IdP's endpoints.
-7. **Document the migration** in `docs/CHATGPT_APP_SETUP.md` under
-   the "Connect a production IdP" section.
+   scopes you need (`mcp:read`, etc.). Note:
+   - The IdP's `iss` claim (from the IdP's `/.well-known/openid-configuration`).
+   - The IdP's `jwks_uri` (also from the same discovery doc).
+2. **Configure the lab to point at the IdP:**
+   ```bash
+   export MCP_OAUTH_MODE=external
+   export MCP_OAUTH_IDP_ISSUER="https://your-tenant.auth0.com/"
+   export MCP_OAUTH_IDP_JWKS_URL="https://your-tenant.auth0.com/.well-known/jwks.json"
+   # The lab's `iss` (what /mcp advertises in the WWW-Authenticate
+   # challenge and PRM `authorization_servers`) must equal the IdP's
+   # `iss` in v0.8.0.
+   export MCP_OAUTH_ISSUER="https://your-tenant.auth0.com/"
+   # The resource (aud) is still the lab's URL.
+   export MCP_OAUTH_RESOURCE="https://lab.example.com/mcp"
+   ```
+3. **Start the lab.** The in-process AS endpoints (`/oauth2/v1/*`,
+   `/.well-known/oauth-authorization-server`, `/oauth/jwks.json`)
+   automatically return `404 as_disabled`. The `/mcp` endpoint
+   validates inbound Bearer tokens against the IdP's JWKS.
+4. **Register your app at the IdP** as a confidential or public
+   client. Use the standard authorization-code-with-PKCE flow.
+5. **Have the IdP include the lab's `aud`** in issued access tokens.
+   For Auth0: configure an "audience" parameter; for Okta: set
+   `aud` in the authorization server's claims; for Cognito: enable
+   "Generate client secret" and add a custom resource server whose
+   identifier is the lab's `MCP_OAUTH_RESOURCE`.
+6. **Done.** No code changes. The in-process AS stays in the
+   codebase for local demos (`MCP_OAUTH_MODE=local`); the cutover
+   is reversible.
 
-## Honest limitations (v0.7.0)
+#### Per-IdP snippets
 
-These are intentional for a self-contained lab. None block a demo
-flow.
+**Auth0**
+
+```bash
+# After creating an API in the Auth0 dashboard (Settings → APIs):
+#   Identifier: https://your-tenant.auth0.com/api/v2/   (this becomes the iss)
+#   Signing Algorithm: RS256
+#   Allow Skipping User Consent: false
+export MCP_OAUTH_IDP_ISSUER="https://your-tenant.auth0.com/"
+export MCP_OAUTH_IDP_JWKS_URL="https://your-tenant.auth0.com/.well-known/jwks.json"
+# Set the lab's `iss` to the Auth0 domain (NOT the API identifier —
+# Auth0 puts the domain in `iss`, not the audience).
+export MCP_OAUTH_ISSUER="https://your-tenant.auth0.com/"
+# The resource the lab advertises (and validates `aud` against):
+export MCP_OAUTH_RESOURCE="https://lab.example.com/mcp"
+# When calling /authorize, pass `audience=https://lab.example.com/mcp`.
+```
+
+**Okta**
+
+```bash
+export MCP_OAUTH_IDP_ISSUER="https://your-domain.okta.com/oauth2/default"
+export MCP_OAUTH_IDP_JWKS_URL="https://your-domain.okta.com/oauth2/default/v1/keys"
+export MCP_OAUTH_ISSUER="https://your-domain.okta.com/oauth2/default"
+```
+
+**Cognito**
+
+```bash
+export MCP_OAUTH_IDP_ISSUER="https://cognito-idp.<region>.amazonaws.com/<user-pool-id>"
+export MCP_OAUTH_IDP_JWKS_URL="https://cognito-idp.<region>.amazonaws.com/<user-pool-id>/.well-known/jwks.json"
+export MCP_OAUTH_ISSUER="https://cognito-idp.<region>.amazonaws.com/<user-pool-id>"
+```
+
+**Stytch / Keycloak** — same pattern: copy the issuer and JWKS URL
+from the IdP's discovery document and set the three env vars.
+
+#### Verifying the cutover
+
+```bash
+# 1. Confirm the in-process AS is gated:
+curl -i http://localhost:8787/.well-known/oauth-authorization-server
+# → 404, body: {"error":"as_disabled",...}
+
+# 2. Mint a token from your IdP (out of scope here; do it via the IdP's
+#    token endpoint or a test helper) and call /mcp:
+curl -i -H "Authorization: Bearer $IDP_JWT" http://localhost:8787/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"cutover-check","version":"0"}}}'
+# → 200 OK with a session-id header
+```
+
+### Pre-v0.8.0 cutover (for historical context)
+
+Before v0.8.0, swapping the in-process AS for a production IdP
+required editing `src/server/app.ts` to comment out the AS routes
+and `src/server/auth.ts` to call the IdP's `/userinfo` for
+`sub` extraction. That manual procedure has been superseded by the
+`MCP_OAUTH_MODE=external` switch.
+
+## Honest limitations
+
+### Resolved in v0.8.0
+
+- ~~**Self-signed tokens.** The lab generates its own RSA key pair.~~
+  → Resolved in v0.8.0: `MCP_OAUTH_MODE=external` switches to a
+  JWKS-backed `RemoteTokenValidator` that validates against any
+  RS256 IdP. Key rotation is supported via forced refetch on
+  `kid` miss.
+
+### Still open in v0.8.0
 
 - **In-memory state.** Authorization codes and registered clients
-  are lost on process restart. The JWT signing key is regenerated,
-  so any in-flight tokens become invalid. A process restart
-  effectively forces re-authorization.
+  are lost on process restart. (Local mode only. In external mode
+  the IdP owns this state.)
 - **No refresh tokens.** Clients re-authorize when the access token
   expires. The 15-minute TTL is short enough to be safe in a demo.
-- **Self-signed tokens.** The lab generates its own RSA key pair. No
-  certificate chain, no key rotation. A real IdP must be used for
-  any non-demo deployment.
 - **No consent audit.** The consent page POSTs `decision=allow` and
   the lab always grants. A real IdP records the user's decision.
 - **The `code_challenge_method` is `S256` only.** RFC 7636 allows
@@ -187,4 +277,12 @@ flow.
 - **CIMD is partially implemented.** The resolver validates the
   document and caches it, but does not verify that the CIMD URL
   itself appears in the `redirect_uris` list (a recommended
-  hardening per the latest draft).
+  hardening per the latest draft). Tracked as a v0.9.0 follow-up.
+- **External mode requires the lab `iss` to equal the IdP `iss`.**
+  In v0.8.0 the lab's `MCP_OAUTH_ISSUER` is the IdP's issuer URL;
+  there is no separate "resource issuer" / "AS issuer" distinction
+  yet. Splitting these is a v0.9.0 conversation.
+- **External mode does not fetch JWKS at startup.** The first
+  `/mcp` request triggers the fetch; if the IdP is down at that
+  moment the first request 401s. Acceptable for a demo, but for
+  production health probes should pre-warm the cache.

@@ -3,13 +3,13 @@
 **Lab folder:** `C:\anotator8-chatgpt-integration-lab\`
 **Anotator8 repo:** `C:\Anotator8\` (untouched вЂ” zero edits inside; only the lab was touched)
 **Old prototype:** `C:\chat-gpt-mcp-app\` (inspected read-only, see `docs/PROTOTYPE_AUDIT.md`)
-**Lab version:** 0.7.0
-**Last re-verified:** 2026-06-07 (this session вЂ” see "Phase 4 вЂ” Re-verification" at the bottom of this file)
+**Lab version:** 0.8.0
+**Last re-verified:** 2026-06-07 (this session вЂ” see "Phase 5 вЂ” Re-verification" at the bottom of this file)
 **MCP SDK:** `@modelcontextprotocol/sdk@1.29.0` + `@modelcontextprotocol/ext-apps@1.7.4`
 
-> **Note on header vs body:** the **header block above** is the current authoritative snapshot (lab version, MCP SDK, last verification date). The **body** of this file is a historical phase record (v0.2.0 в†’ v0.2.1 в†’ v0.3.0 в†’ v0.4.0 в†’ v0.5.0 в†’ v0.6.0) and intentionally preserves the older test counts (e.g. 60/60, 112/112) at the points those phases were frozen. If a number in the body disagrees with the header, the **header is correct for "now"** and the body number is the snapshot at the phase it describes. See the bottom of this report for the most recent re-verification section.
+> **Note on header vs body:** the **header block above** is the current authoritative snapshot (lab version, MCP SDK, last verification date). The **body** of this file is a historical phase record (v0.2.0 в†’ v0.2.1 в†’ v0.3.0 в†’ v0.4.0 в†’ v0.5.0 в†’ v0.6.0 в†’ v0.7.0) and intentionally preserves the older test counts (e.g. 60/60, 112/112, 198/198) at the points those phases were frozen. If a number in the body disagrees with the header, the **header is correct for "now"** and the body number is the snapshot at the phase it describes. See the bottom of this report for the most recent re-verification section.
 
-**Status (v0.7.0):** Build clean, **198/198** tests pass across **26** files, `npm run verify` **8/8** (build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport), smoke **PASS** (HTTP + OAuth PRM), `npm run demo:stdio` **PASS** (full MCP protocol roundtrip over stdio), `npm run demo:oauth` **PASS** (full OAuth 2.1 flow with PKCE S256 + DCR + JWT вЂ” NEW in v0.7.0), `npm run verify:dev` **PASS** (headless MCP Inspector roundtrip), **8** read-only tools, MCP Inspector via `npm run inspect` (interactive). **Zero unhandled rejections** in test output. **OAuth 2.0 Protected Resource Metadata (RFC 9728) shipped (v0.3.0).** **OAuth 2.1 Authorization Server (RFC 8414 + RFC 7591 + RFC 7636 + RFC 8707 + CIMD) shipped (v0.7.0).** **MCP Apps host bridge (2026-01-26) shipped as primary widget path with legacy `window.openai` fallback.** **STDIO transport (v0.4.0)** so the same server works with Claude Desktop, Cursor, Windsurf, Cline, OpenCode, Aider, Continue, GitHub Copilot in VS Code, plus everything else that speaks MCP 2025-06-18. See [`docs/MCP_COMPATIBILITY.md`](docs/MCP_COMPATIBILITY.md) for the full client Г— feature matrix. See [`docs/OAUTH_AS.md`](docs/OAUTH_AS.md) for the in-process AS design and the production-IdP cutover recipe.
+**Status (v0.8.0):** Build clean, **214/214** tests pass across **29** files, `npm run verify` **8/8** (build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport), smoke **PASS** (HTTP + OAuth PRM), `npm run demo:stdio` **PASS** (full MCP protocol roundtrip over stdio), `npm run demo:oauth` **PASS** (full OAuth 2.1 flow with PKCE S256 + DCR + JWT), `npm run verify:dev` **PASS** (headless MCP Inspector roundtrip), **8** read-only tools, MCP Inspector via `npm run inspect` (interactive). **Zero unhandled rejections** in test output. **OAuth 2.0 Protected Resource Metadata (RFC 9728) shipped (v0.3.0).** **OAuth 2.1 Authorization Server (RFC 8414 + RFC 7591 + RFC 7636 + RFC 8707 + CIMD) shipped (v0.7.0).** **Production IdP cutover seam shipped (v0.8.0):** `MCP_OAUTH_MODE=local|external` switch; external mode validates JWTs against any RS256 IdP's JWKS (Auth0/Okta/Cognito/Stytch/Keycloak). **MCP Apps host bridge (2026-01-26) shipped as primary widget path with legacy `window.openai` fallback.** **STDIO transport (v0.4.0)** so the same server works with Claude Desktop, Cursor, Windsurf, Cline, OpenCode, Aider, Continue, GitHub Copilot in VS Code, plus everything else that speaks MCP 2025-06-18. See [`docs/MCP_COMPATIBILITY.md`](docs/MCP_COMPATIBILITY.md) for the full client Г— feature matrix. See [`docs/OAUTH_AS.md`](docs/OAUTH_AS.md) for the in-process AS design and the production-IdP cutover recipe (Auth0/Okta/Cognito/Stytch snippets included).
 
 ---
 
@@ -313,7 +313,7 @@ See [`docs/PORTING_TO_ANOTATOR8.md`](docs/PORTING_TO_ANOTATOR8.md) for the full 
 
 ## Remaining Risks (honest)
 
-1. **In-process OAuth 2.1 AS** is shipped (v0.7.0), but it is suitable for self-hosted demos only. Production deploys must cut over to a real IdP (Auth0 / Okta / Cognito / Stytch) using the [cutover recipe in OAUTH_AS.md](docs/OAUTH_AS.md#cutover-recipe-production-idp). Limitations documented in the same file: in-memory state, no refresh tokens, self-signed tokens, consent stub, CIMD partial.
+1. **In-process OAuth 2.1 AS** is shipped (v0.7.0), but it is suitable for self-hosted demos only. v0.8.0 added a `local | external` mode switch so production deploys can cut over to a real IdP (Auth0 / Okta / Cognito / Stytch / Keycloak) using a config change only — see [OAUTH_AS.md](docs/OAUTH_AS.md#cutover-recipe-production-idp). The `local` mode limitations documented in the same file still apply (in-memory state, no refresh tokens, consent stub, CIMD partial).
 2. **No live ChatGPT Developer Mode** connection verified end-to-end. Protocol is verified to MCP 2025-06-18 via `npm run smoke` and `tests/integration/http-mcp-protocol.test.ts`; Apps-bridge 2026-01-26 is verified by `tests/contract/widget-bridge.test.ts`; RFC 9728 metadata is verified by `tests/integration/oauth/protected-resource.test.ts`. End-to-end needs a paid ChatGPT account + tunnel.
 3. **MCP SDK 1.29.0 + ext-apps 1.7.4 recursion bug** is captured by the rejection handler (not silenced вЂ” the audit log records it), but the bug is still in the SDK. Workaround stays in place until upstream fix.
 4. **No load test** with >10k annotations. Adapter is O(n) on nodes; memory is bounded; report generation can hit string length limits for very large projects.
@@ -656,7 +656,7 @@ For CI-style verification of the same flow without a browser or paid ChatGPT acc
 
 ### Remaining risks (honest, per Section 16 of the prompt)
 
-1. **In-process OAuth 2.1 AS** is shipped (v0.7.0), but it is suitable for self-hosted demos only. Production deploys must cut over to a real IdP (Auth0 / Okta / Cognito / Stytch) using the [cutover recipe in OAUTH_AS.md](docs/OAUTH_AS.md#cutover-recipe-production-idp). Limitations documented in the same file: in-memory state, no refresh tokens, self-signed tokens, consent stub, CIMD partial.
+1. **In-process OAuth 2.1 AS** is shipped (v0.7.0), but it is suitable for self-hosted demos only. v0.8.0 added a `local | external` mode switch so production deploys can cut over to a real IdP (Auth0 / Okta / Cognito / Stytch / Keycloak) using a config change only — see [OAUTH_AS.md](docs/OAUTH_AS.md#cutover-recipe-production-idp). The `local` mode limitations documented in the same file still apply (in-memory state, no refresh tokens, consent stub, CIMD partial).
 2. **No live ChatGPT Developer Mode** connection verified end-to-end. Protocol is verified to MCP 2025-06-18 via `npm run smoke` and `tests/integration/http-mcp-protocol.test.ts`; Apps-bridge 2026-01-26 is verified by `tests/contract/widget-bridge.test.ts`; RFC 9728 metadata is verified by `tests/integration/oauth/protected-resource.test.ts`; the headless MCP-Inspector-style roundtrip is verified by `npm run verify:dev`. End-to-end needs a paid ChatGPT account + tunnel.
 3. **MCP SDK 1.29.0 + ext-apps 1.7.4 recursion bug** is captured by the rejection handler (not silenced вЂ” the audit log records it), but the bug is still in the SDK. Workaround stays in place until upstream fix.
 4. **No load test** with >10k annotations. Adapter is O(n) on nodes; memory is bounded; report generation can hit string length limits for very large projects.
@@ -667,11 +667,13 @@ For CI-style verification of the same flow without a browser or paid ChatGPT acc
 
 ### Follow-up (per Section 16 of the prompt)
 
-1. **Cut over to a production IdP** using the recipe in [OAUTH_AS.md](docs/OAUTH_AS.md#cutover-recipe-production-idp). Update `src/server/auth.ts` to call the IdP's `/userinfo` (or equivalent) for `sub` extraction.
+1. **Cut over to a production IdP** — **DONE in v0.8.0.** `MCP_OAUTH_MODE=external` validates JWTs against any RS256 IdP's JWKS (Auth0/Okta/Cognito/Stytch/Keycloak). Per-IdP snippets in [OAUTH_AS.md](docs/OAUTH_AS.md#cutover-recipe-production-idp).
 2. **Add `npm audit --omit=dev` to CI** (already in `.github/workflows/ci.yml`); bump `@modelcontextprotocol/sdk` when upstream recursion bug is fixed.
 3. **Export a real Anotator8 project file** to use as a golden fixture.
 4. **Once a production IdP is in place**, add `propose_annotation_changes` / `apply_annotation_patch` as reversible, approval-gated write tools (currently disabled in `config/capabilities.example.json`).
-5. **Add refresh tokens** (currently absent in the in-process AS). Production IdPs will ship these out of the box.
+5. **Add refresh tokens** to the in-process AS (small, well-scoped). External-mode users get them from the IdP out of the box.
+6. **CIMD hardening**: verify the CIMD URL appears in the document's `redirect_uris` list per the latest draft (one test + one line in `cimd.ts`).
+7. **Split lab `iss` from IdP `iss`**: today they must be equal. A v0.9.0 conversation.
 6. **CIMD hardening**: verify the CIMD URL appears in the document's `redirect_uris` list per the latest draft.
 
 
@@ -800,6 +802,86 @@ all checks passed
 - **Harden CIMD** by verifying the CIMD URL appears in the document's `redirect_uris` list.
 - **Replace the static consent page** with a real IdP-grade consent UI.
 - **Implement `propose_annotation_changes` / `apply_annotation_patch`** as reversible, approval-gated write tools (gated on a production IdP being in place).
+
+These are all documented as the next steps in `docs/OAUTH_AS.md` and the Follow-up section of this report.
+
+
+---
+
+## Phase 5 вЂ” v0.8.0 Production IdP cutover вЂ” Re-verification (2026-06-07)
+
+This section captures the v0.8.0 release, which adds a `local | external` mode switch so the lab can validate tokens against a production IdP's JWKS without code changes. Replaces item #1 in the Follow-up list.
+
+### Headline numbers (v0.8.0)
+
+| Metric | v0.7.0 | v0.8.0 |
+| --- | --- | --- |
+| Lab version | 0.7.0 | **0.8.0** |
+| Tests | 198/198 (26 files) | **214/214 (29 files)** |
+| `npm run verify` | 8/8 | 8/8 |
+| `npm run demo:oauth` | PASS | PASS (local mode unchanged) |
+| Source files | 47 | 50 (+ `remote-issuer.ts`, `issuer-factory.ts`; `token-issuer.ts` + `as-handlers.ts` + `app.ts` + `auth.ts` + `oauth-tool-result.ts` refactored) |
+| New tests | +80 (OAuth AS) | +16 (remote validator + factory + external-mode gating) |
+
+### Files added in v0.8.0
+
+- `src/server/oauth/remote-issuer.ts` вЂ” `RemoteTokenValidator` (fetches JWKS, caches, refetches on `kid` miss, supports RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512).
+- `src/server/oauth/issuer-factory.ts` вЂ” `createIssuerFactory` + `readOauthModeFromEnv`. Selects between local and external validators.
+- `tests/unit/oauth/remote-issuer.test.ts` вЂ” 7 tests.
+- `tests/unit/oauth/issuer-factory.test.ts` вЂ” 5 tests.
+- `tests/integration/oauth/external-mode-as-disabled.test.ts` вЂ” 4 tests (verifies AS routes return 404 `as_disabled` in external mode).
+
+### Files modified in v0.8.0
+
+- `src/server/oauth/token-issuer.ts` вЂ” extracted `TokenValidator` interface, `validateClaims` shared helper.
+- `src/server/oauth/as-handlers.ts` вЂ” `mode` field, external-mode short-circuit to 404 `as_disabled`.
+- `src/server/auth.ts` вЂ” `checkAuth` is now `async`; accepts `TokenValidator` (sync or async) instead of `TokenIssuer`.
+- `src/server/app.ts` вЂ” `buildIssuerFactory` helper, reads `MCP_OAUTH_MODE` / `MCP_OAUTH_IDP_ISSUER` / `MCP_OAUTH_IDP_JWKS_URL`.
+- `src/server/oauth/oauth-tool-result.ts` вЂ” uses `validator.validate` (awaitable).
+- `docs/OAUTH_AS.md` вЂ” added "v0.8.0 вЂ” one-env-var cutover" with Auth0/Okta/Cognito/Stytch snippets; updated limitations, env var table, and test counts.
+- `docs/SECURITY.md` вЂ” "Remaining Concerns" row for the AS now reads "switch to external mode for production".
+- `docs/research/OFFICIAL_DOCS_RESEARCH.md` вЂ” Production IdP cutover item moved to "Resolved in v0.8.0".
+- `REPORT.md` вЂ” header + status updated to v0.8.0.
+
+### Environment variables added in v0.8.0
+
+| Env var | Purpose | Required in |
+| --- | --- | --- |
+| `MCP_OAUTH_MODE` | `local` (default) or `external` | optional |
+| `MCP_OAUTH_IDP_ISSUER` | The IdP's `iss` claim URL | external |
+| `MCP_OAUTH_IDP_JWKS_URL` | The IdP's JWKS URL | external |
+
+### Verification commands and outputs
+
+```text
+$ npx tsc -p tsconfig.build.json --noEmit
+$ echo $?
+0
+
+$ npx vitest run
+ Test Files  29 passed (29)
+      Tests  214 passed (214)
+   Duration  6.88s
+
+$ npm run verify
+... (8/8 steps pass, identical to v0.7.0)
+```
+
+### Configuration examples verified
+
+| Mode | Env vars | Result |
+| --- | --- | --- |
+| local (default) | (none) | `npm run demo:oauth` PASS (in-process AS) |
+| external | `MCP_OAUTH_MODE=external`, `MCP_OAUTH_IDP_ISSUER=https://idp.example.com/`, `MCP_OAUTH_IDP_JWKS_URL=https://idp.example.com/.well-known/jwks.json`, `MCP_OAUTH_ISSUER=https://idp.example.com/` | `/.well-known/oauth-authorization-server`, `/oauth2/v1/token`, `/oauth/jwks.json` all return 404 with `as_disabled`; `/mcp` accepts Bearer tokens whose signature validates against `https://idp.example.com/.well-known/jwks.json`. Verified by `tests/integration/oauth/external-mode-as-disabled.test.ts`. |
+
+### What v0.8.0 does NOT yet do (honest, not blocking the demo)
+
+- **Add refresh tokens** to the in-process AS (small, well-scoped). External-mode users get them from the IdP out of the box.
+- **CIMD hardening**: verify the CIMD URL appears in the document's `redirect_uris` list (one test + one line in `cimd.ts`).
+- **Split lab `iss` from IdP `iss`**: today they must be equal. A v0.9.0 conversation.
+- **Pre-warm JWKS cache at startup**: today the first `/mcp` request triggers the fetch. Production health probes should consider pre-warming.
+- **Export a real Anotator8 project file** to use as a golden fixture (replaces the synthetic one).
+- **Implement `propose_annotation_changes` / `apply_annotation_patch`** as reversible, approval-gated write tools вЂ” gated on a production IdP being in place.
 
 These are all documented as the next steps in `docs/OAUTH_AS.md` and the Follow-up section of this report.
 

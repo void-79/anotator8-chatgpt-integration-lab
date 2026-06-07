@@ -5,7 +5,7 @@
 > **Lab state at audit start:** v0.4.0, branch `main`, working tree CLEAN, last commit `42906e1 docs(quickstart): add QUICKSTART.md + npm run verify`
 > **Trust posture:** trust = 0% until verified; verified below
 
-> **Re-verified:** 2026-06-07, lab v0.7.0. The original section-by-section COVERED table below is still accurate — every cited file is still on disk and the line citations still match. The post-re-verification deltas (small, additive) are documented in [`REPORT.md` § Phase 3 — Discovery-First Build Prompt v1 — Re-verification](../../REPORT.md) (v0.6.0) and [`REPORT.md` § Phase 4 — v0.7.0 OAuth 2.1 Authorization Server — Re-verification](../../REPORT.md) (v0.7.0). Headline numbers re-run at v0.7.0: 198/198 tests, `npm run verify` 8/8.
+> **Re-verified:** 2026-06-07, lab v0.8.0. The original section-by-section COVERED table below is still accurate — every cited file is still on disk and the line citations still match. The post-re-verification deltas (small, additive) are documented in [`REPORT.md` § Phase 3 — Discovery-First Build Prompt v1 — Re-verification](../../REPORT.md) (v0.6.0), [`REPORT.md` § Phase 4 — v0.7.0 OAuth 2.1 Authorization Server — Re-verification](../../REPORT.md) (v0.7.0), and [`REPORT.md` § Phase 5 — v0.8.0 Production IdP cutover — Re-verification](../../REPORT.md) (v0.8.0). Headline numbers re-run at v0.8.0: 214/214 tests across 29 files, `npm run verify` 8/8.
 
 This audit compares the requirements in the "Discovery-First Build Prompt v1" (sections 0–16) against the current state of `C:\anotator8-chatgpt-integration-lab\`. The prompt was treated as a checklist — **not** as a build plan, because the lab is already at v0.4.0 with full evidence of working code, tests, smoke, and docs.
 
