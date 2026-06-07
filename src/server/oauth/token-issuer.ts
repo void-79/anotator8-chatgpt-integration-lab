@@ -14,12 +14,12 @@
  *   client_id — the registered client (CIMD URL or DCR id)
  *   jti    — random JWT ID
  *
- * The validator verifies:
- *   - signature with the AS's RS256 public key (JWKS)
- *   - `iss` matches the configured issuer
- *   - `aud` matches the configured resource
- *   - `exp` is in the future, `nbf` is in the past
- *   - `scope` contains all required scopes (caller-supplied)
+ * The `TokenValidator` interface is the only thing the auth path
+ * depends on. The local `TokenIssuer` implements it; the
+ * `RemoteTokenValidator` (see `remote-issuer.ts`) implements it
+ * for production IdPs. This file also exports the shared
+ * `validateClaims` helper so the iss/aud/exp/nbf/scope checks are
+ * identical for both implementations.
  *
  * Spec: RFC 7519 (JWT) + RFC 8725 (JWT BCP) + RFC 8707 (resource indicators).
  */
@@ -45,14 +45,6 @@ export interface IssuedTokenClaims {
   readonly jti: string;
 }
 
-export interface TokenIssuer {
-  readonly config: TokenIssuerConfig;
-  readonly signingKey: SigningKey;
-  readonly jwks: JwkSet;
-  issue(input: IssueInput): IssuedTokenClaims & { token: string };
-  validate(token: string, requiredScopes: ReadonlyArray<string>): ValidatedToken;
-}
-
 export interface IssueInput {
   readonly clientId: string;
   readonly scope: ReadonlyArray<string>;
@@ -65,6 +57,30 @@ export interface ValidatedToken {
   readonly scopes: ReadonlyArray<string>;
 }
 
+/**
+ * The minimal contract the auth path needs from a token source.
+ * `validate` returns the parsed claims + scopes or throws
+ * `TokenValidationError`. May be sync (local issuer) or async
+ * (remote validator — network round-trip to fetch JWKS).
+ * The `jwks` is published for clients that want to verify
+ * tokens themselves (the local issuer; the remote validator
+ * exposes the IdP's URL instead).
+ */
+export interface TokenValidator {
+  readonly config: { readonly issuer: string; readonly resource: string };
+  readonly jwks: JwkSet | { readonly url: string };
+  validate(token: string, requiredScopes: ReadonlyArray<string>): ValidatedToken | Promise<ValidatedToken>;
+}
+
+/** Local issuer: mints RS256 JWTs and validates them with the same key. */
+export interface TokenIssuer extends TokenValidator {
+  readonly config: TokenIssuerConfig;
+  readonly signingKey: SigningKey;
+  readonly jwks: JwkSet;
+  issue(input: IssueInput): IssuedTokenClaims & { token: string };
+  validate(token: string, requiredScopes: ReadonlyArray<string>): ValidatedToken;
+}
+
 export class TokenValidationError extends Error {
   constructor(
     readonly code: "invalid_token" | "insufficient_scope" | "invalid_audience" | "invalid_issuer" | "expired" | "not_yet_valid" | "malformed",
@@ -73,6 +89,46 @@ export class TokenValidationError extends Error {
     super(message);
     this.name = "TokenValidationError";
   }
+}
+
+/**
+ * Shared post-signature validation: iss, aud, exp, nbf, scope.
+ * Used by both `createTokenIssuer` (local) and
+ * `createRemoteTokenValidator` (external IdP).
+ *
+ * Takes the raw JWT payload (already signature-verified) and a
+ * config describing the expected issuer + resource.
+ */
+export function validateClaims(
+  raw: Record<string, unknown>,
+  config: { readonly issuer: string; readonly resource: string },
+  requiredScopes: ReadonlyArray<string>,
+): ValidatedToken {
+  if (raw.iss !== config.issuer) {
+    throw new TokenValidationError("invalid_issuer", `Expected iss=${config.issuer}, got ${String(raw.iss)}`);
+  }
+  const auds: string[] = Array.isArray(raw.aud) ? (raw.aud as string[]) : [String(raw.aud)];
+  if (!auds.includes(config.resource)) {
+    throw new TokenValidationError("invalid_audience", `Token aud does not include ${config.resource}`);
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof raw.exp !== "number" || raw.exp <= now) {
+    throw new TokenValidationError("expired", "Token expired");
+  }
+  if (typeof raw.nbf === "number" && raw.nbf > now) {
+    throw new TokenValidationError("not_yet_valid", "Token not yet valid");
+  }
+  const scopeString = typeof raw.scope === "string" ? raw.scope : "";
+  const scopes = scopeString.split(/\s+/).filter(Boolean);
+  for (const required of requiredScopes) {
+    if (!scopes.includes(required)) {
+      throw new TokenValidationError("insufficient_scope", `Missing scope: ${required}`);
+    }
+  }
+  return {
+    claims: raw as unknown as IssuedTokenClaims,
+    scopes,
+  };
 }
 
 export function createTokenIssuer(config: TokenIssuerConfig): TokenIssuer {
@@ -106,35 +162,8 @@ export function createTokenIssuer(config: TokenIssuerConfig): TokenIssuer {
       } catch (error) {
         throw new TokenValidationError("invalid_token", `JWT signature verification failed: ${(error as Error).message}`);
       }
-      // iss check
-      if (raw.iss !== config.issuer) {
-        throw new TokenValidationError("invalid_issuer", `Expected iss=${config.issuer}, got ${String(raw.iss)}`);
-      }
-      // aud check (RFC 7519 §4.1.3 — aud can be string or array)
-      const auds: string[] = Array.isArray(raw.aud) ? (raw.aud as string[]) : [String(raw.aud)];
-      if (!auds.includes(config.resource)) {
-        throw new TokenValidationError("invalid_audience", `Token aud does not include ${config.resource}`);
-      }
-      // exp / nbf check
-      const now = Math.floor(Date.now() / 1000);
-      if (typeof raw.exp !== "number" || raw.exp <= now) {
-        throw new TokenValidationError("expired", "Token expired");
-      }
-      if (typeof raw.nbf === "number" && raw.nbf > now) {
-        throw new TokenValidationError("not_yet_valid", "Token not yet valid");
-      }
-      // scope check
-      const scopeString = typeof raw.scope === "string" ? raw.scope : "";
-      const scopes = scopeString.split(/\s+/).filter(Boolean);
-      for (const required of requiredScopes) {
-        if (!scopes.includes(required)) {
-          throw new TokenValidationError("insufficient_scope", `Missing scope: ${required}`);
-        }
-      }
-      return {
-        claims: raw as unknown as IssuedTokenClaims,
-        scopes,
-      };
+      return validateClaims(raw, config, requiredScopes);
     },
   };
 }
+
