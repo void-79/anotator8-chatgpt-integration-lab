@@ -1,0 +1,252 @@
+truth_passport:
+  object_id: lab-v0.9.0-audit
+  object_type: TRUTH_PASSPORT
+  title: lab v0.9.0 — Re-audit against Discovery-First Build Prompt v1
+  generated_at: 2026-06-08
+  reviewer: Mavis (root session — re-audit run)
+  trigger: >
+    User re-pasted the full Discovery-First Build Prompt v1 into the root
+    session. The original audit against this prompt was committed at v0.4.0
+    (docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md) and re-checked at v0.6.0.
+    This passport captures the v0.9.0 re-audit.
+  scope: >
+    Pure synthesis re-audit. No code change. No test change. No Anotator8
+    change. No version bump. Lab stays at v0.9.0. Output is purely additive
+    markdown (REPORT.md § Phase 10 + v0.9.0 delta in
+    docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md) plus this passport.
+  current_answer_ceiling: PARTIAL_EXACT_MARKET + RUNTIME_VERIFIED + RE_AUDIT
+  ceiling_calculation: >
+    min(vehicle_specificity=PARTIAL_EXACT_MARKET [Anotator8 v24.0.0 REPO],
+        source_snapshot_state=CAPTURED_UNHASHED [runtime + repo, 2026-06-08 re-run],
+        evidence_strength=CONFIRMED_FOR_PLATFORM,
+        decision_status=ACCEPTED [3+1 implemented decisions; AS in v0.7.0 + IdP cutover v0.8.0 + refresh rotation v0.9.0],
+        privacy_gate=NEEDS_DPIA [FERPA/COPPA/GDPR — unchanged],
+        safety_gate=MEDIUM [no shell, allowlisted FS, no arb command — re-verified 2026-06-08],
+        test_maturity=EMULATOR_READY [224/224 tests across 30 files — re-verified],
+        unresolved_gaps=20 [3 BLOCKING, plus G-NEW-01 typecheck + G-NEW-03 per-tool scope],
+        release_readiness=app_review_ready [not production-ready; AS shipped; still needs privacy policy + screenshots + support contact],
+        exact_artifact_quality=PARTIAL [synthetic + near-real fixtures; no golden export yet],
+        authorization_scope=oauth_2_1_AS [v0.7.0 foundation + v0.8.0 production IdP cutover + v0.9.0 refresh-token rotation],
+        market_year_trim_software_specificity=Anotator8_v24.0.0+lab_v0.9.0+SDK_1.29.0+ext-apps_1.7.4+Node_24.13.0)
+  weakest_link: >
+    privacy_gate (NEEDS_DPIA) OR unresolved_gaps (G-02 ChatGPT e2e + G-NEW-03 per-tool scope).
+    Ceiling = PARTIAL_EXACT_MARKET (unchanged from v0.4.0 / v0.6.0).
+  vehicle_scope: Anotator8 v24.0.0 + lab v0.9.0
+  capability_scope: 8 read-only tools, 1 prompt, 1 widget resource, OAuth 2.1 AS, refresh-token rotation
+  decision_refs:
+    - canonical/decision-record/bridge-strategy.yaml
+    - canonical/decision-record/auth-strategy.yaml
+    - canonical/decision-record/no-write-tool-policy.yaml
+  safety_status: GO_SIM (safe in simulator) + GO_READ_ONLY (real ChatGPT with Bearer or OAuth 2.1)
+  evidence_status: CONFIRMED_FOR_PLATFORM + RUNTIME_VERIFIED + RE_AUDIT
+  implementation_status: MOCKED + EMULATOR_READY + BENCH_ONLY + FIELD_READ_ONLY + AS_IN_PROCESS
+  release_readiness: "app_review_ready (App Store submission: NEEDS privacy policy + screenshots + support contact)"
+  privacy_status: NEEDS_DPIA
+  source_snapshot_state: "CAPTURED_UNHASHED (runtime + repo, 2026-06-08); LOCATOR_ONLY (12 official URLs)"
+  confidence: MEDIUM-HIGH
+  risk_level: "MEDIUM (G-15 DEMO-ONLY footgun mitigated by 7-line banner; G-16 privacy gap; G-NEW-01 typecheck)"
+  completeness: "0.75 (deferred items: G-02..G-06, G-19, G-NEW-01..G-NEW-06)"
+  identity:
+    name: anotator8-chatgpt-integration-lab
+    version: 0.9.0
+    product: Anotator8 v24.0.0
+    mcp_sdk: 1.29.0
+    ext_apps: 1.7.4
+    node: 24.13.0
+    last_commit: f1fe93b
+    last_commit_date: 2026-06-08
+    branch: main
+    working_tree: CLEAN
+  consumer_features:
+    - 8 read-only tools
+    - 1 prompt (review_anotator8_project)
+    - 1 widget resource (ui://anotator8/review-widget.html)
+    - 2 transports (Streamable HTTP, stdio)
+    - Bearer + RFC 9728 PRM foundation
+    - OAuth 2.1 AS (RFC 8414 + 7591 + 7636 + 8707 + CIMD)
+    - Refresh-token rotation (RFC 6749 §6 + §10.4, single-use + family revocation)
+    - Production IdP cutover (MCP_OAUTH_MODE=external, JWKS validation)
+    - Apps host bridge primary (2026-01-26) + legacy fallback
+  hardware:
+    node: 24.13.0
+    deps: 3 production (SDK, ext-apps, zod); 5 dev
+  os_kernel_platform:
+    protocol: MCP 2025-06-18
+    bridge: Apps SDK 2026-01-26
+  app_model:
+    type: server-side MCP app
+    widget: TS + HTML + CSS in src/widget/
+    native_app: false
+  connectivity:
+    http: 127.0.0.1:8787 default
+    stdio: local MCP clients
+    tunnel: cloudflared / ngrok / tunnel-client / VPS
+  telemetry:
+    audit: stderr JSON lines
+    redaction: Bearer + MCP_AUTH_TOKEN
+  privacy:
+    ferpa_coppa_gdpr: NEEDS_DPIA
+    ferpa_coppa_gdpr_preserved_opaque: true
+  safety:
+    shell_exec: zero
+    fs_write: zero
+    arb_command: zero
+  cybersecurity:
+    threat_model: canonical/threat-record.yaml (10 rows)
+    auth: OAuth 2.1 AS (RFC 8414 + 7591 + 7636 + 8707 + CIMD) + refresh-token rotation (RFC 6749 §6 + §10.4) + Bearer (RFC 6750) + RFC 9728 PRM
+  tests:
+    total: 224
+    files: 30
+    result: PASS
+    growth_since_v0_4: "+106 cases across 13 new files (10 unit/oauth + 3 integration/oauth)"
+  verification:
+    npm_run_build: PASS
+    npm_test: PASS (224/224)
+    npm_run_smoke: PASS (HTTP + OAuth PRM)
+    npm_run_demo_stdio: PASS (full MCP roundtrip over stdio)
+    npm_run_demo_oauth: PASS (PKCE S256 + DCR + JWT + single-use refresh + family revocation)
+    npm_run_verify_dev: PASS (5-step headless Inspector roundtrip + readOnlyHint assertion + widget resource)
+    npm_run_verify: "PASS (8/8: build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport)"
+    npm_audit_omit_dev: PASS (0 vulnerabilities)
+    typecheck: FAIL (4 pre-existing errors; not in verify table; noted honestly)
+    grep_no_shell: PASS (0 child_process/exec/spawn in src/server/**)
+    grep_no_chatgpt_in_anotator8: PASS (0 matches in C:\Anotator8\src)
+  release:
+    current: 0.9.0
+    next: unchanged (this is a re-audit, not a release)
+    app_store_blockers: [G-02, G-19]
+    as_status: "OAuth 2.1 AS shipped (v0.7.0); G-01 closed at lab level; production deploys should use MCP_OAUTH_MODE=external with a third-party IdP"
+  source_quality:
+    repo_evidence: LIVE
+    runtime_evidence: LIVE (8/8 verify, 2026-06-08 re-run)
+    official_doc_evidence: "12 LOCATOR_ONLY (Apps SDK + MCP + RFC 9728 + RFC 6750 + RFC 8414 + RFC 7591 + RFC 7636 + RFC 8707)"
+    audit_evidence: LIVE (this passport + the v0.9.0 delta in docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md + REPORT.md § Phase 10)
+  exact_vehicle_specificity: PARTIAL_EXACT_MARKET
+  discovery_first_prompt_v1_section_status:
+    section_0_core_premise: "COVERED"
+    section_1_official_docs_research: "COVERED"
+    section_2_environment_detection: "COVERED"
+    section_3_anotator8_product_surface: "COVERED"
+    section_4_old_prototype_audit: "COVERED"
+    section_5_lab_folder_structure: "COVERED (+15 oauth modules, +13 oauth test files, +RUNBOOK, +TROUBLESHOOTING, +setup.ps1, +connect-helper.html)"
+    section_6_integration_product_scope: "COVERED (8 read-only; mutation tools still deferred per prompt §6)"
+    section_7_chatgpt_widget: "COVERED"
+    section_8_adapter_first_architecture: "COVERED"
+    section_9_security_privacy_model: "COVERED (+docs/OAUTH_AS.md, +docs/OAUTH_AS_DESIGN.md, 13 new OAuth tests)"
+    section_10_tool_schemas: "COVERED"
+    section_11_test_strategy: "COVERED (224/224 across 30 files; demo:oauth full e2e; verify:dev headless)"
+    section_12_demo_fixtures: "COVERED"
+    section_13_portability_plan: "COVERED (+row: in-process AS should be retired on port)"
+    section_14_implementation_order: "COVERED"
+    section_15_anti_neuro_garbage_rules: "COVERED (strengthened: zero shell, allowlisted FS, no chatgpt|mcp|openai in Anotator8, idempotent setup.ps1)"
+    section_16_deliverables: "COVERED (+4 bonus deliverables: RUNBOOK, TROUBLESHOOTING, setup.ps1, connect-helper.html)"
+  known:
+    - 8 read-only tools with Zod I/O schemas
+    - 224/224 tests pass across 30 files
+    - 8/8 verify pass (build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport)
+    - RFC 9728 PRM foundation (v0.3.0) + RFC 6750 Bearer
+    - OAuth 2.1 AS (v0.7.0) + production IdP cutover (v0.8.0) + refresh-token rotation (v0.9.0)
+    - Zero shell exec, zero FS write, allowlisted FS read
+    - DEMO-ONLY banner on no-token (7-line ASCII)
+    - Bridge detection: Apps host (primary) + window.openai (fallback)
+    - Repeatability: RUNBOOK + TROUBLESHOOTING + setup.ps1 + connect-helper.html
+    - Knowledge base: 12 canonical records + 7 + 1 = 8 truth passports
+  unknown:
+    - Real ChatGPT Developer Mode e2e (GAP G-02; no tunnel + no paid account on this host)
+    - v25+ compatibility (GAP G-04, UU-02)
+    - Whether Apps SDK reviewer will require a third-party IdP vs accept lab's in-process AS
+    - Per-tool scope enforcement (G-NEW-03; depends on scope vocabulary)
+  not_proven:
+    - Production-ready (G-19 App Store assets still missing; privacy DPIA still needed)
+    - Real ChatGPT e2e verified
+    - 10k+ annotation load tested
+  assumptions:
+    - Anotator8 v24.0.0 is current production version
+    - lab HEAD = f1fe93b, clean
+    - legacy docs remain read-only
+    - no worktree is touched by this audit
+    - 'this is a re-audit, not a release. Lab version stays 0.9.0'
+  contradicted_or_conflicting: >
+    None at the re-audit level. REPORT.md body phase narratives still describe
+    older transitions; REPORT.md header is the authoritative current snapshot.
+    The "header wins" rule from REPORT.md applies.
+  allowed_next_steps:
+    - "Live ChatGPT Developer Mode e2e (post G-02): needs tunnel + paid account"
+    - "Per-tool scope enforcement (post G-NEW-03): define scope vocabulary + gate"
+    - "Fix npm run typecheck (post G-NEW-01): 4 pre-existing errors"
+    - "Capture Tier 1 URLs to CAPTURED_HASHED (forward work in canonical/source-radar.yaml)"
+    - "Add golden Anotator8 export fixture (post G-04)"
+    - "Add load test at 10k+ annotations (post G-05)"
+    - "Add reverse proxy with rate limiting (post G-06)"
+    - "Public App Store submission (post G-19: privacy policy URL + 3+ screenshots + support contact)"
+  forbidden_shortcuts:
+    - "Claiming production ready without privacy DPIA"
+    - "Claiming App Store ready without privacy policy + OAuth 2.1 + screenshots + support"
+    - "Claiming ChatGPT e2e verified without live test"
+    - "Exposing on public tunnel without MCP_AUTH_TOKEN"
+    - "Adding write tools without OAuth 2.1 AS + reversal model"
+    - "Reading real Anotator8 backend without privacy redaction pipeline"
+    - "Loosening the FS allowlist"
+    - "Adding child_process / exec / spawn in src/server/**"
+    - "Bumping the lab version without a release commit"
+    - "Touching the worktrees (codex, wt-17ce3ed7, ~/.codex/...) in a re-audit"
+  required_artifacts_to_upgrade:
+    - "To PRODUCTION_READY: privacy DPIA + reverse proxy + privacy redaction pipeline"
+    - "To APP_STORE_READY: privacy policy URL + 3+ screenshots + support contact + third-party IdP"
+    - "To RUNTIME_E2E: live ChatGPT Developer Mode screenshot + log"
+    - "To GOLDEN: real Anotator8 export + redaction pipeline"
+    - "To LOAD_TESTED: 10k annotation benchmark"
+    - "To TYPECHECK_CLEAN: fix 4 pre-existing errors (js-yaml types + 2 test files)"
+  related_sources:
+    - REPORT.md (current authoritative runtime report; Phase 10 is the source for this passport)
+    - docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md (v0.4.0 COVERED table + v0.6.0 delta + v0.9.0 delta)
+    - docs/OAUTH_AS.md (in-process AS design)
+    - docs/OAUTH_AS_DESIGN.md (AS design RFC)
+    - docs/PORTING_TO_ANOTATOR8.md (with the in-process AS deprecation row added in v0.9.0)
+    - docs/SECURITY.md
+    - docs/CHATGPT_APP_SETUP.md
+    - docs/CHATGPT_APP_STORE.md
+    - docs/PRODUCT_SURFACE.md
+    - docs/PROTOTYPE_AUDIT.md
+    - docs/MCP_COMPATIBILITY.md
+    - docs/ARCHITECTURE.md
+    - docs/TOOL_CONTRACTS.md
+    - docs/DEPENDENCY_AUDIT.md
+    - docs/research/OFFICIAL_DOCS_RESEARCH.md
+    - RUNBOOK.md
+    - TROUBLESHOOTING.md
+    - connect-helper.html
+    - scripts/setup.ps1
+    - canonical/product-dossier.yaml (stale at v0.4.0; refresh is a forward task)
+    - canonical/runtime-record.yaml (stale at v0.4.0; refresh is a forward task)
+    - canonical/source-radar.yaml
+    - canonical/threat-record.yaml
+    - canonical/regulatory-record.yaml
+    - canonical/assurance-case-record.yaml
+    - canonical/unknown-unknown.yaml
+  related_gaps:
+    - G-02 (ChatGPT e2e)
+    - G-04 (golden fixture)
+    - G-05 (load test)
+    - G-06 (reverse proxy)
+    - G-15 (DEMO-ONLY footgun)
+    - G-16 (privacy)
+    - G-19 (App Store assets)
+    - G-NEW-01 (typecheck FAIL — 4 pre-existing errors)
+    - G-NEW-02 (ChatGPT e2e end-to-end — same as G-02, restated)
+    - G-NEW-03 (per-tool OAuth scope enforcement)
+    - G-NEW-04 (MCP SDK recursion during teardown)
+    - G-NEW-05 (no load test — same as G-05, restated)
+    - G-NEW-06 (vitest 4.x upgrade path)
+  related_analogs:
+    - MCP Inspector (analog of Postman for MCP)
+    - Cloudflare Tunnel (analog of ngrok for HTTPS exposure)
+    - Auth0 / Okta / Cognito / Styltch / Keycloak (production IdP for MCP_OAUTH_MODE=external)
+  related_methods:
+    - adapter-first
+    - evidence-classified
+    - no-mutation
+    - allowlist-FS
+    - truth-passport-driven
+  last_reviewed: 2026-06-08
+  review_due: 2026-09-08 (quarterly; or sooner on SDK / Apps SDK / RFC change)

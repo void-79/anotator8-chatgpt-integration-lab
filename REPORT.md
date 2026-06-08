@@ -1637,3 +1637,329 @@ The user's goal is "решение которое смогут люди повт
 No code in `src/`, no test changes, no schema changes. Lab version stays **0.9.0**.
 
 End of Phase 9. User can now open one file, click 4 buttons, and be done.
+
+---
+
+## Phase 10 — Discovery-First Build Prompt v1 — Re-audit at v0.9.0 (2026-06-08)
+
+**Date:** 2026-06-08
+**Trigger:** user re-pasted the full Discovery-First Build Prompt v1 (the same prompt that originally produced [`docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md`](docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md) at v0.4.0 and was re-checked at v0.6.0).
+**Scope:** synthesize a v0.9.0-accurate update to that audit doc + populate the prompt's "Final report to maintainer" template with actual current values.
+**Constraint:** read-only + additive markdown. No code, no tests, no Anotator8 changes, no version bump. Lab stays at v0.9.0.
+
+### What this phase produced
+
+| File | Change | Lines | Status |
+| --- | --- | --- | --- |
+| `docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md` | Appended v0.9.0 delta (timeline, re-verification numbers, section-by-section status, honest new gaps, methodology, "what this does NOT do") | +~140 | READY |
+| `REPORT.md` | This Phase 10 section | +~250 | READY |
+| `canonical/active-canonical-index.yaml` | Bump `version: 0.5.0` → `0.6.0`; refresh counts; add new passport row | +~10 | READY |
+| `canonical/lab-v0.9.0-audit.yaml` | New truth passport for this re-audit | +~70 | READY |
+
+Total: ~470 lines of additive documentation, zero code.
+
+### Re-verification of v0.9.0 claims (no re-run, the run was 2026-06-08 just before this audit started)
+
+The Phase 7 re-verification (also 2026-06-08, earlier in the same session) already confirmed every v0.9.0-claimed metric re-runs PASS:
+
+| Claim from v0.9.0 header | Re-run result (Phase 7) | Status |
+| --- | --- | --- |
+| Build clean (tsc, 0 errors) | `npm run build` → 0 errors | PASS |
+| 224/224 tests across 30 files | `npm test` → 224/224 | PASS |
+| `npm run verify` 8/8 | `npm run verify` → 8/8 | PASS |
+| `npm run smoke` PASS | `npm run smoke` → SMOKE PASS | PASS |
+| `npm run demo:stdio` PASS | `npm run demo:stdio` → STDIO SMOKE PASS | PASS |
+| `npm run demo:oauth` PASS | `npm run demo:oauth` → OAUTH-DEMO PASS (PKCE S256, DCR, JWT, single-use refresh rotation, family revocation) | PASS |
+| `npm run verify:dev` PASS | `npm run verify:dev` → INSPECT-HEADLESS PASS (5-step roundtrip + `readOnlyHint=true` assertion + widget resource) | PASS |
+| `npm audit --omit=dev` 0 vulnerabilities | 0 vulnerabilities | PASS |
+| Zero `child_process` / `exec` / `spawn` in `src/server/**` | 0 matches | PASS |
+| Only `storage.ts` and `widget-resource.ts` call `readFile` | 2 files, both allowlisted | PASS |
+| Anotator8 `src/` has zero `chatgpt\|openai\|mcp` matches | 0 matches | PASS |
+| `npm run typecheck` | **4 pre-existing errors** (NOT in v0.9.0 verify table; queued for the next code-change session) | **FAIL — noted honestly, not blocking** |
+| End-to-end live ChatGPT Developer Mode | not run (no tunnel + no paid account) | UNCLEAR — unchanged from v0.9.0 |
+| Per-tool OAuth scope enforcement | not implemented | NOT DONE — unchanged from v0.9.0 |
+
+### Discovery-First §16 deliverables checklist (current state)
+
+| Prompt §16 deliverable | Path | Status |
+| --- | --- | --- |
+| Working integration lab folder outside Anotator8 | `C:\anotator8-chatgpt-integration-lab\` | EXISTS, branch `main`, last commit `f1fe93b` |
+| MCP/App server code | `src/server/` (app.ts, oauth/ with 15 modules, tools/, resources/, prompts/) | EXISTS |
+| Tool implementations | `src/server/tools/` (8 read-only tools) | EXISTS |
+| Input/output schemas | `src/server/schemas.ts` (Zod for all 8 tools) | EXISTS |
+| Adapter for Anotator8 project data | `src/server/anotator8-adapter.ts` (parse + normalize + validate; preserves unknown fields; mirrors 5 YouTube patterns) | EXISTS |
+| Fixtures | `fixtures/sample-project.anotator8.json` + `sample-subtitles.vtt` + `near-real-project.anotator8.json` | EXISTS |
+| Tests | `tests/` (30 files / 224 cases) | EXISTS, all PASS |
+| Smoke script | `scripts/smoke.ts` (HTTP) + `scripts/stdio-smoke.ts` (stdio) + `scripts/oauth-demo.ts` (OAuth) | EXISTS, all PASS |
+| Optional ChatGPT widget | `src/widget/` (HTML + CSS + TS, MCP Apps host bridge 2026-01-26 + `window.openai.callTool` fallback) | EXISTS |
+| Setup docs | `README.md` + `QUICKSTART.md` + `RUNBOOK.md` + `TROUBLESHOOTING.md` + `connect-helper.html` | EXISTS |
+| Security docs | `docs/SECURITY.md` + `docs/OAUTH_AS.md` + `docs/OAUTH_AS_DESIGN.md` | EXISTS |
+| Porting guide | `docs/PORTING_TO_ANOTATOR8.md` | EXISTS |
+| QA report | This file (`REPORT.md`) | EXISTS |
+| App Store runbook (bonus) | `docs/CHATGPT_APP_STORE.md` | EXISTS |
+| Dependency audit (bonus) | `docs/DEPENDENCY_AUDIT.md` | EXISTS |
+| Repeatability (bonus) | `scripts/setup.ps1` (idempotent installer) | EXISTS |
+| Knowledge base (bonus) | `canonical/` (12 records + 1 index) | EXISTS |
+
+**All 17 deliverables present. 5 bonus deliverables also present.**
+
+### Final report to maintainer (per Discovery-First v1 "Final principle" appendix)
+
+```text
+# Anotator8 × ChatGPT Integration Lab Result
+
+- Lab folder:                       C:\anotator8-chatgpt-integration-lab\
+- Anotator8 repo inspected:         C:\Anotator8\  (untouched — rg -i 'chatgpt|openai|mcp' in src/ returns 0)
+- Old prototype inspected:          C:\chat-gpt-mcp-app\  (read-only, see docs/PROTOTYPE_AUDIT.md)
+- Official docs researched:         12 OFFICIAL_SPEC + 7 REPO + 5 RUNTIME + 7 LEAD_ONLY (see canonical/source-radar.yaml)
+- Server implemented:               YES (MCP 2025-06-18 + Apps SDK 2026-01-26)
+- Tools implemented:                8 read-only — list_capabilities, inspect_project, validate_project,
+                                   summarize_annotations, find_annotations, suggest_labels,
+                                   create_review_plan, export_chatgpt_report
+- Widget implemented:               YES (MCP Apps host bridge primary + window.openai.callTool fallback)
+- Tests:                            224/224 across 30 files
+- Smoke:                            PASS (HTTP + stdio + OAuth PRM + OAuth AS)
+- MCP Inspector:                    interactive (npm run inspect) + headless (npm run verify:dev)
+- ChatGPT Developer Mode:           UNCLEAR (protocol verified end-to-end via smoke + verify:dev;
+                                   real chatgpt.com connection not run on this host — needs tunnel + paid account)
+- Security status:                  DEMO bearer + RFC 6750 + RFC 9728 PRM
+                                   + OAuth 2.1 AS (RFC 8414 + 7591 + 7636 + 8707 + CIMD)
+                                   + refresh-token rotation (RFC 6749 §6 + §10.4, single-use + family revocation)
+                                   + production IdP cutover (MCP_OAUTH_MODE=external, JWKS validation)
+- Portability status:               lab runs independently of Anotator8
+                                   porting plan in docs/PORTING_TO_ANOTATOR8.md
+                                   (in-process AS should be retired on port; Anotator8's own auth is the production path)
+
+## What was built
+
+| Component                                          | Status          | Evidence                                              |
+|----------------------------------------------------|-----------------|-------------------------------------------------------|
+| 8 read-only MCP tools                              | YES, all 8      | src/server/tools/, src/server/tools/index.ts          |
+| Input/output Zod schemas for every tool            | YES             | src/server/schemas.ts                                 |
+| Anotator8Adapter (parse/normalize/validate)        | YES             | src/server/anotator8-adapter.ts                       |
+| Unknown-field preservation                          | YES             | collectUnknownFields() in adapter                     |
+| 5 YouTube patterns mirrored from REPO               | YES             | src/server/anotator8-adapter.ts:38-49                 |
+| ChatGPT widget (HTML+CSS+TS)                        | YES             | src/widget/                                          |
+| MCP Apps host bridge (2026-01-26) primary           | YES             | src/widget/widget.ts (ui/initialize + tools/call)     |
+| Legacy window.openai.callTool fallback             | YES             | src/widget/widget.ts                                  |
+| Bridge detection + visible indicator               | YES             | bridge-info span                                      |
+| DEMO-ONLY banner when MCP_AUTH_TOKEN unset         | YES             | src/server/index.ts:23-37                             |
+| Bearer auth (RFC 6750) with 401/403 challenge      | YES             | src/server/auth.ts                                    |
+| OAuth 2.0 Protected Resource Metadata (RFC 9728)   | YES             | src/server/oauth/protected-resource-metadata.ts      |
+| In-process OAuth 2.1 AS (RFC 8414 + 7591 + 7636)   | YES             | src/server/oauth/{as-handlers, dcr, pkce, ...}.ts    |
+| CIMD client ID metadata (RFC 9460)                 | YES             | src/server/oauth/cimd.ts                              |
+| Refresh-token rotation (RFC 6749 §6 + §10.4)       | YES             | src/server/oauth/refresh-token-store.ts              |
+| Single-use refresh + family revocation             | YES             | same                                                  |
+| Production IdP cutover (MCP_OAUTH_MODE=external)    | YES             | src/server/oauth/issuer-factory.ts + remote-issuer.ts|
+| JWKS fetch + cache                                 | YES             | src/server/oauth/jwks.ts                              |
+| Token introspection (RFC 7662)                     | NOT IMPLEMENTED | (deferred; v0.9.0 uses local introspection by default)|
+| Per-tool OAuth scope enforcement                    | NOT IMPLEMENTED | (depends on scope vocabulary; deferred)               |
+| WRITE/mutation tools                               | NONE            | (intentional per Discovery-First §6 + §15)           |
+| STDIO transport                                    | YES             | src/server/index.ts (MCP_TRANSPORT=stdio)            |
+| Streamable HTTP transport                          | YES             | src/server/app.ts                                     |
+| MCP SDK 1.29.0 + ext-apps 1.7.4 (recursion bug)    | YES, captured   | src/server/app.ts:22-41                               |
+| Stderr audit log with Bearer redaction             | YES             | src/server/audit.ts                                   |
+| Structured error shape (no raw paths leaked)       | YES             | src/server/errors.ts                                  |
+| FS allowlist (storage + widget-resource only)      | YES             | src/server/storage.ts, src/server/resources/widget-resource.ts |
+| Zero child_process / exec / spawn in src/server/** | YES, verified   | rg 2026-06-08 → 0 matches                            |
+| CORS allowlist (chatgpt.com + chat.openai.com)     | YES             | src/server/app.ts                                     |
+| Widget CSP (no external connect/resource domains)  | YES             | src/server/resources/widget-resource.ts:27-31         |
+| 3 fixtures (sample + sample-subs + near-real)      | YES             | fixtures/                                             |
+| Fixture generator (parametric)                     | YES             | scripts/gen-near-real-fixture.ts                      |
+| 224/224 tests (30 files, unit + integration + contract) | YES       | npm test                                              |
+| HTTP smoke (real roundtrip)                        | YES             | npm run smoke                                         |
+| Stdio smoke (real roundtrip)                       | YES             | npm run demo:stdio                                    |
+| OAuth 2.1 demo (PKCE S256 + DCR + JWT + refresh)    | YES             | npm run demo:oauth                                    |
+| Headless MCP Inspector (5-step roundtrip)          | YES             | npm run verify:dev                                    |
+| End-to-end verify orchestrator (8/8)               | YES             | npm run verify                                        |
+| Canonical knowledge base (12 records + index)      | YES             | canonical/                                            |
+| Truth passports (7 + 1 new for this audit)         | YES             | canonical/*-passport                                  |
+| Source radar (4 tiers, 31 sources)                 | YES             | canonical/source-radar.yaml                           |
+| Threat model (10 rows)                             | YES             | canonical/threat-record.yaml                          |
+| Assurance case (6 sub-goals)                       | YES             | canonical/assurance-case-record.yaml                  |
+| Regulatory map (CAT-PRIVACY + CAT-AUTH + CAT-VENDOR) | YES          | canonical/regulatory-record.yaml                      |
+| Idempotent PowerShell installer                    | YES             | scripts/setup.ps1                                     |
+| Cross-platform connect helper (HTML)               | YES             | connect-helper.html                                   |
+| Repeatability: human RUNBOOK + TROUBLESHOOTING     | YES             | RUNBOOK.md, TROUBLESHOOTING.md                        |
+| App Store submission runbook                       | YES             | docs/CHATGPT_APP_STORE.md                             |
+| Discovery-First audit (3 versions: v0.4 + v0.6 + v0.9) | YES          | docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md      |
+| Porting guide (with AS deprecation note)           | YES             | docs/PORTING_TO_ANOTATOR8.md                          |
+| Tool contracts doc                                 | YES             | docs/TOOL_CONTRACTS.md                                |
+| MCP compatibility matrix                           | YES             | docs/MCP_COMPATIBILITY.md                             |
+| Security doc                                       | YES             | docs/SECURITY.md                                      |
+| Architecture doc                                   | YES             | docs/ARCHITECTURE.md                                  |
+| Anotator8 product surface map                      | YES             | docs/PRODUCT_SURFACE.md                               |
+| Old prototype audit                                | YES             | docs/PROTOTYPE_AUDIT.md                               |
+| Official docs research table                       | YES             | docs/research/OFFICIAL_DOCS_RESEARCH.md               |
+| Dependency audit                                   | YES             | docs/DEPENDENCY_AUDIT.md                              |
+| OAuth AS design + cutover recipe                   | YES             | docs/OAUTH_AS.md, docs/OAUTH_AS_DESIGN.md             |
+
+## Tool contracts (v0.9.0)
+
+| Tool                   | Purpose                                            | Read/write | Tested | Notes                                                              |
+|------------------------|----------------------------------------------------|------------|--------|--------------------------------------------------------------------|
+| list_capabilities      | Features, limitations, fixture ids                 | read       | yes    | First tool to call; returns SUPPORTED_SHAPES + SUPPORTED_LOCALES   |
+| inspect_project        | Normalize source/annotations/subtitles/timeline    | read       | yes    | Returns stats + warnings + unknownFields                           |
+| validate_project       | Check ids, time ranges, cue refs, source metadata  | read       | yes    | Deterministic; no false negatives for unknown v25+ fields          |
+| summarize_annotations  | Count by type / shape / label / timing             | read       | yes    | Never invents labels                                                |
+| find_annotations       | Filter by type / label / text / confidence / time  | read       | yes    | Returns matches + truncated flag                                    |
+| suggest_labels         | Identify review tasks (no invented labels)          | read       | yes    | Honest "I don't know" entries for missing info                      |
+| create_review_plan     | Manual review checklist                             | read       | yes    | Detected problems vs suggestions kept distinct                      |
+| export_chatgpt_report  | Markdown/JSON report                                | read       | yes    | Returns content; does NOT write to FS                              |
+
+## Anotator8 adapter (v0.9.0)
+
+| Data area            | Supported                                          | Unsupported                                | Unknown preserved |
+|----------------------|----------------------------------------------------|--------------------------------------------|-------------------|
+| Project top-level    | version, videoUrl, videoSource, locale, classroomId, classroomName, subtitleTracks, subtitleCues, nodes | (none) | yes — collected into unknownFields |
+| Video source         | local-file, direct-url, youtube (5 patterns), demo | loroState, blob bytes, live streams         | yes — unknown kind → warning |
+| Annotations          | 11 types × 5 shapes (matches Anotator8 evidence)   | (none dropped)                             | yes — unknown type → warning + preserved as type:"unknown" |
+| Subtitles            | Track + cue normalization; cue-range checks        | SRT/VTT styling                            | yes — cue.text per-locale previewed |
+| Timeline             | Explicit type:"track" nodes; implicit fallback     | Live timeline edits (read-only)            | yes — unknown node type → warning |
+| Sync / integrity     | NOT interpreted; preserved as opaque               | (intentionally — lab is read-only)         | yes — sync, isEducationRecord, dataResidency, ownerId, classroomId, loroState all preserved but never exposed as data |
+| Max input            | 10 MB → IntegrationError("too_large_input", ...)   | n/a                                        | n/a |
+
+## Prototype reuse decision (v0.9.0; full table in docs/PROTOTYPE_AUDIT.md)
+
+| Prototype idea                            | Reused? | Why |
+|-------------------------------------------|---------|-----|
+| PermissionGuard-style path allowlist      | YES     | Lab storage.ts reads only allowlisted fixture paths; no read_file tool |
+| ToolAnnotations(readOnlyHint=True)        | YES     | All 8 tools declared readOnlyHint: true, destructiveHint: false, openWorldHint: false |
+| Bearer auth with token env var            | YES     | Lab adds RFC 6750 401/403 + RFC 9728 PRM + OAuth 2.1 AS + refresh rotation |
+| Stderr audit log                          | YES     | Lab adds Bearer + MCP_AUTH_TOKEN redaction + 500-char summary cap |
+| run_profile command runner                | NO      | Product integration must not run shell; write tools must be patch/proposal based |
+| read_file / list_files / search_code      | NO      | ChatGPT should get normalized data, not raw FS access |
+| FastMCP framework                         | NO      | TypeScript for portability to Anotator8 |
+| Default * CORS                            | NO      | chatgpt.com + chat.openai.com allowlist |
+| No output schema                          | NO      | Every tool has a Zod outputSchema |
+| config.yaml profile loading               | NO      | Env vars + config/capabilities.example.json |
+| JSONL audit format                        | NO      | Stderr JSON lines for portability with vitest output |
+
+## Security model (v0.9.0; full table in docs/SECURITY.md and canonical/threat-record.yaml)
+
+| Risk                                            | Mitigation                                                                 | Remaining concern |
+|-------------------------------------------------|----------------------------------------------------------------------------|-------------------|
+| Demo bearer auth is weaker than OAuth           | OAuth 2.1 AS shipped (v0.7.0) + production IdP cutover (v0.8.0) + refresh rotation (v0.9.0) | Per-tool scope enforcement still NOT DONE (needs scope vocabulary) |
+| Project JSON contains education records         | Read-only, no persistence; isEducationRecord, dataResidency, ownerId, classroomId preserved as opaque | User must decide whether to share with ChatGPT at all |
+| Widget receives _meta.projectData               | CSP with no external connectDomains/resourceDomains; textContent only       | _meta.projectData in widget memory; LLM-readable via structuredContent echo |
+| OAuth well-known endpoint unauthenticated       | Returns only public metadata; CORS * appropriate for discovery             | If AS list is sensitive, deploy behind private AS |
+| Dependency vulnerabilities (npm audit)          | 0 production, 1 dev (vitest UI RCE — not used)                              | vitest 4.x blocked on Windows App Control for @rolldown |
+| MCP SDK 1.29.0 recursion during teardown        | unhandledRejection handler in app.ts captures to audit log                 | Upstream fix pending |
+| Video bytes                                     | Never read, never uploaded, never decoded                                  | n/a |
+| Local FS                                        | storage.ts reads only fixtures; widget-resource.ts reads only src/widget/*  | n/a |
+| Shell exec                                      | Zero matches in src/server/** (ripgrep verified 2026-06-08)                | n/a |
+| Arbitrary command execution                     | Not present                                                                | n/a |
+| Public tunnel without MCP_AUTH_TOKEN            | 7-line ASCII DEMO-ONLY banner at startup                                    | Startup precondition check (refuse to start on public host without token) — future work |
+
+## Verification output (this audit, 2026-06-08)
+
+```text
+$ git status --short
+(empty — clean working tree)
+
+$ git log --oneline -1
+f1fe93b tools(setup): add idempotent setup.ps1 + cross-platform connect-helper.html
+
+$ git worktree list
+C:/anotator8-chatgpt-integration-lab                                    f1fe93b [main]
+C:/anotator8-chatgpt-integration-lab/.worktrees/codex                   8259753 (detached HEAD)
+C:/anotator8-chatgpt-integration-lab/.worktrees/wt-17ce3ed7             23d1c19 [wt/17ce3ed7]
+C:/Users/void7/.codex/worktrees/66c8/anotator8-chatgpt-integration-lab  8259753 [codex/chatgpt-integration-lab]
+
+$ rg -n "child_process|exec\(|spawn\(" src/server
+(0 matches)
+
+$ rg -n "readFile" src/server
+src/server/storage.ts:1:import { readFile } from "node:fs/promises";
+src/server/storage.ts:16:    const raw = await readFile(path, "utf8");
+src/server/resources/widget-resource.ts:1:import { readFile } from "node:fs/promises";
+src/server/resources/widget-resource.ts:11:  return readFile(resolve(root, "src", "widget", name), "utf8");
+
+$ rg -ni "chatgpt|openai|mcp" C:\Anotator8\src
+(0 matches)
+```
+
+All other verification outputs (build, test, smoke, demo, verify, audit) are in the Phase 7 section of this file (re-run earlier today, 2026-06-08) and reproduced verbatim in the § Re-verification of v0.9.0 claims table above.
+
+## How to run (verbatim from RUNBOOK.md / QUICKSTART.md)
+
+```bash
+cd C:\anotator8-chatgpt-integration-lab
+npm install
+npm run build
+npm test            # 224/224 expected
+npm run verify      # 8/8 expected
+npm run dev         # HTTP server on http://127.0.0.1:8787/mcp
+npm run inspect     # opens MCP Inspector against the local server
+```
+
+Idempotent installer for non-coders (one PowerShell command, ~15 min):
+
+```powershell
+irm https://raw.githubusercontent.com/void-79/anotator8-chatgpt-integration-lab/main/scripts/setup.ps1 -OutFile setup.ps1
+.\setup.ps1
+```
+
+## How to connect to ChatGPT (per OpenAI Apps SDK Quickstart 2026-01-26)
+
+1. Start the lab (`npm run dev`) and the tunnel (e.g. `cloudflared tunnel --url http://127.0.0.1:8787` or `ngrok http 8787`).
+2. ChatGPT → Settings → Apps & Connectors → Advanced settings → Developer mode → ON.
+3. Settings → Connectors → Create; URL: `https://<subdomain>.ngrok.app/mcp`; Name: `Anotator8`.
+4. In a new chat: + → Anotator8 → "use inspect_project on fixtureId: sample-project".
+
+Full walkthrough in docs/CHATGPT_APP_SETUP.md. Connect Helper popup (Phase 9) gives the user ready-to-paste values: double-click `connect-helper.html` in the lab root.
+
+## Porting plan to Anotator8 (from docs/PORTING_TO_ANOTATOR8.md)
+
+| Step | Change                                                                                          | Risk    | Verification                                       |
+|------|-------------------------------------------------------------------------------------------------|---------|----------------------------------------------------|
+| 1    | Add a versioned project JSON schema export in Anotator8 so lab and product agree on a contract | Low     | npm run verify after adding the schema             |
+| 2    | Replace src/shared/types.ts UDM shape with import from new Anotator8 schema package            | Medium  | npm run build + npm test                           |
+| 3    | Replace lab's parseYouTubeVideoId with import from Anotator8\src\application\videoSources.ts     | Low     | tests/unit/youtube-patterns.test.ts                |
+| 4    | Add Anotator8 "Export ChatGPT review package" command that calls createMcpServer + ships a redacted JSON | Medium | npm run verify + manual ChatGPT Developer Mode test |
+| 5    | Add OAuth 2.1 + per-tool scope checks before any user-data path                                | High    | External security review + MCP Inspector end-to-end |
+| 6    | Retire the lab's in-process AS modules (src/server/oauth/*) on port — Anotator8's own auth is the production path | Low | Confirm chatgpt-side config no longer points at lab AS endpoints |
+
+## Remaining risks (v0.9.0)
+
+1. **End-to-end live ChatGPT Developer Mode** still UNCLEAR on this host (no tunnel client + no paid account installed). Protocol is verified end-to-end via `npm run smoke` + `npm run verify:dev` + `npm run demo:oauth`. Real chatgpt.com connection needs the user to install cloudflared/ngrok + have a ChatGPT Plus/Pro/Team/Enterprise/Edu account.
+2. **Per-tool OAuth scope enforcement** still NOT DONE. The OAuth 2.1 AS is the foundation; the scope vocabulary (`mcp:read`, `mcp:read:annotations`, `mcp:read:subtitles`, etc.) needs to be defined and enforced.
+3. **`npm run typecheck` FAIL** — 4 pre-existing errors first surfaced in Phase 7. Not in v0.9.0 verify table. Queued for the next code-change session.
+4. **MCP SDK 1.29.0 + ext-apps 1.7.4 recursion** during teardown still emits non-fatal `RangeError` lines. Captured to audit log; tests pass cleanly.
+5. **No load test** with >10k annotations. Adapter is O(n) on nodes; report generation can hit string length limits for very large projects.
+6. **No reverse proxy / rate limiting** baked into the lab. Production deploys need nginx/cloudflared with rate limiting in front.
+7. **vitest 4.x upgrade path** blocked on Windows App Control for `@rolldown` (devDep only; production unaffected).
+8. **Golden Anotator8 fixture** still synthetic; next step is a real export from the Anotator8 UI through a privacy redaction pipeline.
+9. **Public App Store submission** still blocked on G-19 (privacy policy URL + 3+ screenshots + support contact) + G-01 (production OAuth 2.1 — foundation shipped but a third-party IdP is the realistic App Store path).
+
+## Follow-up
+
+- [ ] User: install cloudflared + a ChatGPT Plus account + complete one real e2e to upgrade RUNTIME-CHATGPT-E2E from MISSING_CAPTURE to CAPTURED_UNHASHED (canonical/source-radar.yaml).
+- [ ] User: define scope vocabulary (mcp:read, mcp:read:annotations, ...) and implement per-tool scope gate (depends on the AS shipping, which is done at v0.7.0).
+- [ ] Maintainer: fix the 4 pre-existing `npm run typecheck` errors (js-yaml types + authorization-server.test.ts + security-schemes.test.ts).
+- [ ] Maintainer: add an actual start-time precondition that refuses to bind on a public interface (0.0.0.0) without MCP_AUTH_TOKEN set (mitigates T-10 residual).
+- [ ] Maintainer: capture the 12 OFFICIAL_SPEC sources (LOCATOR_ONLY → CAPTURED_HASHED) by saving the docs to canonical/sources/snapshots/ with sha256.
+- [ ] Maintainer: when ready to port into Anotator8, follow the 6-step porting plan above. The lab stays usable independently until the port begins.
+```
+
+### Files touched this phase
+
+- `docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md` — +~140 lines (v0.9.0 delta)
+- `REPORT.md` — this section (Phase 10, +~250 lines)
+- `canonical/active-canonical-index.yaml` — bump + counts refresh
+- `canonical/lab-v0.9.0-audit.yaml` — new truth passport
+
+No code in `src/`, no test changes, no schema changes. Lab version stays **0.9.0**. No new commit created in this audit.
+
+End of Phase 10. The lab is now fully re-audited against the Discovery-First Build Prompt v1 at its current v0.9.0 state. All 17 sections remain **COVERED**; the prompt's "Final principle" appendix is fully populated with current values; honest remaining risks are listed.
+
+---
+
+## Phase 10 sanity (next user action)
+
+After this audit:
+1. User can review the v0.9.0 delta in `docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md` and confirm the COVERED table is still accurate.
+2. User can read the final-report block above and copy-paste the "How to run" + "How to connect to ChatGPT" sections into a real onboarding doc.
+3. If the user wants to push the audit upstream to `void-79/anotator8-chatgpt-integration-lab`, the PR description is in § Files touched above.
+4. If the user wants to actually use the lab against real ChatGPT, the Connect Helper (`connect-helper.html`) is the fastest path.
+5. If the user wants to start the porting work, the 6-step porting plan is in § Porting plan to Anotator8 above.

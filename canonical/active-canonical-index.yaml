@@ -1,12 +1,15 @@
 active_canonical_index:
-  version: 0.5.0
-  generated_at: 2026-06-07
-  previous_version: 0.4.0
-  release_type: knowledge-base-retrofit
+  version: 0.6.0
+  generated_at: 2026-06-08
+  previous_version: 0.5.0
+  release_type: knowledge-base-and-re-audit-2
   main_goal: >
-    Retrofit the system-prompt knowledge-base framework (truth passports, evidence ceiling,
-    role views, source radar, answer policy) onto the Anotator8×ChatGPT×MCP lab.
-    No new runtime behavior. No changes to src/**, tests/**, REPORT.md, or legacy docs.
+    Re-audit the lab against the Discovery-First Build Prompt v1 at v0.9.0.
+    Pure synthesis — no runtime change, no test change, no Anotator8 change.
+    Adds REPORT.md § Phase 10 + v0.9.0 delta in
+    docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md + new
+    truth-passport/lab-v0.9.0-audit.yaml.
+    Lab version stays 0.9.0.
   canonical_objects:
     active_canonical_index: 1
     product_dossier: 1
@@ -66,11 +69,12 @@ active_canonical_index:
     canonical_claim_count_target: 25
   evidence:
     note: >
-      RUNTIME evidence: 118/118 tests + 4/4 verify (build+test+smoke+demo:stdio).
+      RUNTIME evidence: 224/224 tests + 8/8 verify (build+test+smoke+demo:stdio+demo:oauth+verify:dev+validate:canonical+validate:truth-passport).
       OFFICIAL_DOC evidence: 12 URLs, all LOCATOR_ONLY (see source-radar.yaml).
       REPO evidence: Anotator8 v24.0.0 source, lab source (REPO_LIVE).
-    runtime_pass_count: 118
-    verify_pass_count: 4
+      RE-AUDIT evidence: this index bump + truth-passport/lab-v0.9.0-audit.yaml + REPORT.md § Phase 10 + v0.9.0 delta in docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md.
+    runtime_pass_count: 224
+    verify_pass_count: 8
   sources:
     note: >
       Tier 1 (OFFICIAL_SPEC) = 12 entries, all LOCATOR_ONLY.
@@ -110,17 +114,18 @@ active_canonical_index:
       Plus 2 cross-cutting: widget-bridge, review-prompt.
       Safe re-use: mock data, allowlisted fixtures, no real Anotator8 backend.
   tests:
-    total: 118
-    files: 17
+    total: 224
+    files: 30
     suite_distribution:
-      unit: 7
-      integration: 6
+      unit: 17
+      integration: 9
       contract: 4
     runner: vitest@^3.2.4
   truth_passports:
-    count_target: 7
+    count_target: 8
     list:
       - lab-v0.4.0
+      - lab-v0.9.0-audit
       - tool-list-capabilities
       - tool-inspect-project
       - tool-validate-project
