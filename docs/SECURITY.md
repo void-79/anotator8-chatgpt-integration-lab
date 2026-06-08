@@ -42,6 +42,7 @@ This is intentional demo behavior. It is not a vulnerability in the strict sense
 - **10 MB** maximum project payload enforced in `Anotator8Adapter.parse` with `IntegrationError("too_large_input", ...)`.
 - **Optional Bearer auth** through `MCP_AUTH_TOKEN` (comma-separated tokens supported). When unset, a 7-line DEMO-ONLY banner is printed. When set, `auth.ts` enforces RFC 6750 `WWW-Authenticate: Bearer realm="anotator8-chatgpt-lab", error="..."` with 401 missing and 403 invalid.
 - **OAuth 2.0 Protected Resource Metadata** (RFC 9728) at `/.well-known/oauth-protected-resource[/<path>]` (added in v0.3.0). The 401/403 challenge now also carries `resource_metadata="<well-known url>"` per RFC 9728 §5.1. Authorization-server implementation is a follow-up; this is the discovery foundation.
+- **Refresh-token store (v0.9.0) — single-use rotation + family revocation + hash-only storage.** Refresh tokens are 256-bit random, base64url-encoded; the store keeps SHA-256 hashes (never plaintext); each token is single-use and on presentation the handler issues a new pair; cross-client presentation revokes the entire family (RFC 6749 §6 + §10.4 best practice); rows past their `expiresAt` are swept on the next `consume()` to bound memory. TTL controlled by `MCP_OAUTH_REFRESH_TTL_SECONDS` (default 30 days). In external mode the lab does not issue refresh tokens.
 - **Production auth** must use OAuth 2.1 with protected resource metadata and per-tool scope checks.
 - **Origin allowlist** defaults to `https://chatgpt.com` and `https://chat.openai.com`; local no-origin requests are allowed for smoke/Inspector. Add via `CORS_ORIGIN` (comma-separated).
 - **Widget CSP** declares no external `connectDomains` or `resourceDomains`.
@@ -67,7 +68,8 @@ Project text, labels, subtitles, and unknown fields are untrusted. Mitigations:
 
 | Risk | Mitigation | Remaining concern |
 | --- | --- | --- |
-| Demo bearer auth is weaker than OAuth | Use only locally; configure `MCP_AUTH_TOKEN` for public tunnel demos. The startup banner makes the demo mode unmissable. | Production must implement OAuth 2.1 authorization server. v0.3.0 ships the protected-resource-metadata foundation. |
+| In-process OAuth 2.1 AS (v0.7.0) is suitable for self-hosted demos only | PKCE S256 enforced; DCR + CIMD supported; JWT validation checks sig + iss + aud + exp + nbf + scope. v0.8.0 adds a `local | external` mode switch so production can validate against a real IdP's JWKS without code changes. | In `local` mode the lab issues its own tokens. For production set `MCP_OAUTH_MODE=external` and point at a real IdP — see `docs/OAUTH_AS.md` for the cutover recipe (Auth0/Okta/Cognito/Stytch snippets included). |
+| Demo bearer auth is weaker than OAuth | `MCP_AUTH_TOKEN` env sets a static-token allowlist; `MCP_OAUTH_REQUIRE_AUTH=true` forces JWT auth. The startup banner is unmissable in demo mode. | Lab must not be exposed to the public internet without `MCP_OAUTH_REQUIRE_AUTH=true` AND a production IdP. |
 | Project JSON can contain sensitive education records | Read-only, no persistence, docs warn what ChatGPT sees. `isEducationRecord`, `dataResidency`, `ownerId`, `classroomId` are preserved as opaque fields. | User must decide whether to share project JSON with ChatGPT. |
 | Widget receives hidden `_meta.projectData` for focus buttons | CSP locked down; no external network domains. `textContent` only (no `innerHTML`). | Remove or reduce `_meta.projectData` before production if not strictly needed. |
 | Dependency vulnerabilities from `npm audit` | Noted; no forced major upgrade applied. | Needs dependency review before production. |
@@ -75,4 +77,5 @@ Project text, labels, subtitles, and unknown fields are untrusted. Mitigations:
 | Video bytes | Never read, never uploaded, never decoded. | n/a |
 | Local FS | Allowlisted fixture path + widget source path only. | n/a |
 | Shell exec | Zero `child_process` / `exec` / `spawn`. | n/a |
-| OAuth well-known endpoint is unauthenticated by design (RFC 9728 §3.1) | Returns only public metadata (resource identifier, optional AS list, optional scopes, bearer methods). No tokens, no PII. CORS `*` is appropriate for public discovery. | If AS list is sensitive, the deployment must use a private AS. |
+| OAuth well-known endpoints are unauthenticated by design (RFC 8414 §3 + RFC 9728 §3.1) | Return only public metadata (resource identifier, AS endpoints, scopes, bearer methods). No tokens, no PII. CORS `*` is appropriate for public discovery. | If the AS list is sensitive, the deployment must use a private AS. |
+| In-memory AS state is lost on process restart | Authorization codes, registered clients, refresh tokens, and the JWT signing key are all in-memory. | A process restart forces all clients to re-authorize (and their refresh tokens become invalid). Acceptable for a demo; production IdP is required for high availability. |

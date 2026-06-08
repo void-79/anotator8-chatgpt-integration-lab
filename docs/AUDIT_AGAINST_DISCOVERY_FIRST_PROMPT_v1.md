@@ -5,6 +5,8 @@
 > **Lab state at audit start:** v0.4.0, branch `main`, working tree CLEAN, last commit `42906e1 docs(quickstart): add QUICKSTART.md + npm run verify`
 > **Trust posture:** trust = 0% until verified; verified below
 
+> **Re-verified:** 2026-06-07, lab v0.8.0. The original section-by-section COVERED table below is still accurate — every cited file is still on disk and the line citations still match. The post-re-verification deltas (small, additive) are documented in [`REPORT.md` § Phase 3 — Discovery-First Build Prompt v1 — Re-verification](../../REPORT.md) (v0.6.0), [`REPORT.md` § Phase 4 — v0.7.0 OAuth 2.1 Authorization Server — Re-verification](../../REPORT.md) (v0.7.0), and [`REPORT.md` § Phase 5 — v0.8.0 Production IdP cutover — Re-verification](../../REPORT.md) (v0.8.0). Headline numbers re-run at v0.8.0: 214/214 tests across 29 files, `npm run verify` 8/8.
+
 This audit compares the requirements in the "Discovery-First Build Prompt v1" (sections 0–16) against the current state of `C:\anotator8-chatgpt-integration-lab\`. The prompt was treated as a checklist — **not** as a build plan, because the lab is already at v0.4.0 with full evidence of working code, tests, smoke, and docs.
 
 The user said: "If it already exists, inspect it first and do not overwrite user work blindly." That is the path taken.
@@ -199,3 +201,72 @@ The widget will pick the new MCP Apps host bridge (preferred) and fall back to l
 | 3 | Replace lab's `parseYouTubeVideoId` with import from `Anotator8\src\application\videoSources.ts` | Low (function is pure) | `tests/unit/youtube-patterns.test.ts` |
 | 4 | Add Anotator8 "Export ChatGPT review package" command that calls `createMcpServer` and ships a redacted JSON | Medium (touches UI shell) | `verify` + manual ChatGPT Developer Mode test |
 | 5 | Add OAuth 2.1 + per-tool scope checks before any user-data path | High (security-critical) | External security review + MCP Inspector end-to-end |
+
+---
+
+## Delta vs v0.4.0 — Re-verification at v0.6.0 (2026-06-07)
+
+This delta is the *additive* change between the original v0.4.0 audit (above) and the current v0.6.0 lab. Nothing in the v0.4.0 audit was removed or contradicted. Full evidence lives in [`REPORT.md` § Phase 3 — Discovery-First Build Prompt v1 — Re-verification](../../REPORT.md).
+
+### Lab version timeline
+
+| Version | Date | What changed since previous |
+| --- | --- | --- |
+| v0.4.0 | 2026-06-07 (prior session) | STDIO transport, universal-MCP foundation, QUICKSTART |
+| v0.5.0 | 2026-06-07 (prior session) | "Honest deployment model" doc note (tunnel required for ChatGPT; no server) |
+| **v0.6.0** | 2026-06-07 (this session) | Headless MCP Inspector smoke (`scripts/inspect-headless.ts` + `npm run verify:dev`) |
+
+### Files added in this session (v0.5.0 → v0.6.0)
+
+| Path | Purpose |
+| --- | --- |
+| `scripts/inspect-headless.ts` (new, 187 lines) | Headless, non-interactive equivalent of `npm run inspect`. Boots the HTTP MCP app, drives the Streamable HTTP transport with the same 5 steps a manual Inspector session performs, asserts `readOnlyHint: true` for every tool. |
+
+### Files modified in this session
+
+| Path | Change |
+| --- | --- |
+| `package.json` | Version `0.5.0` → `0.6.0`; new script `"verify:dev": "tsx scripts/inspect-headless.ts"`. |
+| `src/server/app.ts` | `SERVER_VERSION` constant `"0.4.0"` → `"0.6.0"`. |
+| `scripts/verify.ts` | New step `{ name: "verify:dev", script: "verify:dev" }` added to the verify pipeline. Docstring updated. Total verify steps: 6 → 7. |
+| `REPORT.md` | (1) Header-vs-body note explaining the v0.4.0/v0.5.0 historical phase record vs the v0.6.0 current snapshot. (2) New "Phase 3 — Re-verification" section with all prompt-tables, exact test/smoke outputs, and the Section-16 deliverables. |
+| `docs/CHATGPT_APP_SETUP.md` | New "Headless MCP Inspector Smoke (CI-friendly, added in v0.6.0)" section. |
+| `docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md` | This delta. |
+
+### Re-verification headline numbers
+
+| Metric | v0.4.0 (original audit) | v0.6.0 (this re-run) |
+| --- | --- | --- |
+| Tests | 118/118 | **198/198** |
+| Test files | 17 | **26** |
+| `npm run verify` | 4/4 (build + test + smoke + demo:stdio) | **8/8** (build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport) |
+| Tools | 8 read-only | **8 read-only** (with new headless assertion that every tool declares `readOnlyHint: true`) |
+| MCP Inspector smoke | interactive only (`npm run inspect`) | **interactive (`npm run inspect`) + headless (`npm run verify:dev`)** |
+| Production-dep vulnerabilities | 0 | **0** |
+| Dev-dep vulnerabilities | 1 known (vitest UI RCE; not used) | **1 known (vitest UI RCE; not used)** — unchanged |
+| Anotator8 source edits | 0 | **0** |
+| Lab working tree | clean | **clean** (modulo this session's edits) |
+
+### Section-by-section status (v0.6.0, post-delta)
+
+| # | Prompt section | Status (v0.4.0) | Status (v0.6.0) | Notes |
+| --- | --- | --- | --- | --- |
+| 0 | Core premise — trust=0% | COVERED | COVERED | unchanged |
+| 1 | Official docs research | COVERED | COVERED | unchanged |
+| 2 | Environment detection | COVERED | COVERED | unchanged |
+| 3 | Anotator8 product surface | COVERED | COVERED | unchanged |
+| 4 | Old prototype audit | COVERED | COVERED | unchanged |
+| 5 | External lab folder structure | COVERED | COVERED | unchanged |
+| 6 | Integration product scope (read-only MVP) | COVERED | COVERED | unchanged; mutation tools still deferred per prompt §6 |
+| 7 | ChatGPT App UI widget | COVERED | COVERED | unchanged; widget scope table re-published in REPORT.md § Phase 3 |
+| 8 | Adapter-first architecture | COVERED | COVERED | unchanged; adapter table re-published in REPORT.md § Phase 3 |
+| 9 | Security and privacy model | COVERED | COVERED | unchanged + new row for "Inspector UI not usable in CI" mitigated by `verify:dev` |
+| 10 | Tool schemas and output schemas | COVERED | COVERED | unchanged; tool contract table re-published in REPORT.md § Phase 3 |
+| 11 | Test strategy | COVERED | COVERED | unchanged + new test surface (5-step headless inspector roundtrip) |
+| 12 | Demo fixtures | COVERED | COVERED | unchanged |
+| 13 | Portability plan | COVERED | COVERED | unchanged; porting table re-published in REPORT.md § Phase 3 |
+| 14 | Implementation order | COVERED | COVERED | unchanged |
+| 15 | Anti-neuro-garbage rules | COVERED | COVERED | unchanged; the new `verify:dev` script *strengthens* the rule "no fake 'works' claim" because it asserts `readOnlyHint: true` for every tool at every CI run |
+| 16 | Deliverables | COVERED | COVERED | unchanged + new row: "Headless inspector smoke (CI-friendly)" |
+
+**No section went from COVERED to UNCOVERED.** Two sections (Security, Test strategy) gained one new row each.

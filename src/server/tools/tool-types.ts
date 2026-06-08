@@ -23,11 +23,17 @@ export function success<T extends object>(data: T, text?: string) {
 
 export function failure(tool: ToolModule, error: unknown) {
   const normalized = toIntegrationError(error).toShape();
-  const structuredContent = {
+  const structuredContent: Record<string, unknown> = {
     ok: false,
     error: normalized satisfies IntegrationErrorShape,
     ...tool.empty,
   };
+  // If the error carries a `challenge` field (auth errors only), surface it
+  // to the SDK via _meta["mcp/www_authenticate"] per the OpenAI Apps SDK
+  // Auth doc.
+  if (error && typeof error === "object" && "challenge" in error && typeof (error as { challenge: unknown }).challenge === "string") {
+    structuredContent._meta = { "mcp/www_authenticate": (error as { challenge: string }).challenge };
+  }
   return {
     structuredContent,
     isError: true,
