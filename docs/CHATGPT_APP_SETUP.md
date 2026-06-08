@@ -164,7 +164,7 @@ The bridge is verified in CI by `tests/contract/widget-bridge.test.ts` which ass
 
 ## Production Auth Gap
 
-The lab ships the **OAuth 2.1 Authorization Server foundation** in v0.7.0 — a minimal in-process AS that mints RS256 JWT access tokens and supports PKCE S256, DCR, and CIMD. See [OAUTH_AS.md](./OAUTH_AS.md) for the full design and the cutover recipe.
+The lab ships the **OAuth 2.1 Authorization Server foundation** in v0.7.0 — a minimal in-process AS that mints RS256 JWT access tokens and supports PKCE S256, DCR, and CIMD. From v0.9.0, the AS **also issues refresh tokens** alongside access tokens (single-use rotation, family revocation, hash-only storage — see [OAUTH_AS.md § v0.9.0](./OAUTH_AS.md#v090--refresh-tokens-rfc-6749--6--104)). In `MCP_OAUTH_MODE=external`, refresh tokens are issued by the IdP (the lab does not issue them itself).
 
 In v0.7.0 the AS is **always on** for discovery, but auth is **opt-in** (`MCP_OAUTH_REQUIRE_AUTH=true` to require it for all tools). Before any real deployment that handles user / customer / student project data:
 
@@ -173,6 +173,7 @@ In v0.7.0 the AS is **always on** for discovery, but auth is **opt-in** (`MCP_OA
 3. Set `MCP_OAUTH_REQUIRE_AUTH=true` once the IdP is in place.
 4. Configure per-tool scopes (`MCP_OAUTH_TOOL_SCHEMES_JSON`) for fine-grained access.
 5. Review `docs/SECURITY.md` and `docs/PROTOTYPE_AUDIT.md`.
+6. (v0.9.0+) Decide a refresh-token TTL. `MCP_OAUTH_REFRESH_TTL_SECONDS` defaults to 30 days; tune per your IdP's session policy.
 
 ## OAuth Discovery (RFC 9728)
 

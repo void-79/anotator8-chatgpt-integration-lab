@@ -3,13 +3,13 @@
 **Lab folder:** `C:\anotator8-chatgpt-integration-lab\`
 **Anotator8 repo:** `C:\Anotator8\` (untouched вЂ” zero edits inside; only the lab was touched)
 **Old prototype:** `C:\chat-gpt-mcp-app\` (inspected read-only, see `docs/PROTOTYPE_AUDIT.md`)
-**Lab version:** 0.8.0
-**Last re-verified:** 2026-06-07 (this session вЂ” see "Phase 5 вЂ” Re-verification" at the bottom of this file)
+**Lab version:** 0.9.0
+**Last re-verified:** 2026-06-08 (this session вЂ” see "Phase 6 вЂ” Re-verification + Refresh Tokens" at the bottom of this file)
 **MCP SDK:** `@modelcontextprotocol/sdk@1.29.0` + `@modelcontextprotocol/ext-apps@1.7.4`
 
-> **Note on header vs body:** the **header block above** is the current authoritative snapshot (lab version, MCP SDK, last verification date). The **body** of this file is a historical phase record (v0.2.0 в†’ v0.2.1 в†’ v0.3.0 в†’ v0.4.0 в†’ v0.5.0 в†’ v0.6.0 в†’ v0.7.0) and intentionally preserves the older test counts (e.g. 60/60, 112/112, 198/198) at the points those phases were frozen. If a number in the body disagrees with the header, the **header is correct for "now"** and the body number is the snapshot at the phase it describes. See the bottom of this report for the most recent re-verification section.
+> **Note on header vs body:** the **header block above** is the current authoritative snapshot (lab version, MCP SDK, last verification date). The **body** of this file is a historical phase record (v0.2.0 в†’ v0.2.1 в†’ v0.3.0 в†’ v0.4.0 в†’ v0.5.0 в†’ v0.6.0 в†’ v0.7.0 в†’ v0.8.0 в†’ v0.9.0) and intentionally preserves the older test counts (e.g. 60/60, 112/112, 198/198, 214/214) at the points those phases were frozen. If a number in the body disagrees with the header, the **header is correct for "now"** and the body number is the snapshot at the phase it describes. See the bottom of this report for the most recent re-verification section.
 
-**Status (v0.8.0):** Build clean, **214/214** tests pass across **29** files, `npm run verify` **8/8** (build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport), smoke **PASS** (HTTP + OAuth PRM), `npm run demo:stdio` **PASS** (full MCP protocol roundtrip over stdio), `npm run demo:oauth` **PASS** (full OAuth 2.1 flow with PKCE S256 + DCR + JWT), `npm run verify:dev` **PASS** (headless MCP Inspector roundtrip), **8** read-only tools, MCP Inspector via `npm run inspect` (interactive). **Zero unhandled rejections** in test output. **OAuth 2.0 Protected Resource Metadata (RFC 9728) shipped (v0.3.0).** **OAuth 2.1 Authorization Server (RFC 8414 + RFC 7591 + RFC 7636 + RFC 8707 + CIMD) shipped (v0.7.0).** **Production IdP cutover seam shipped (v0.8.0):** `MCP_OAUTH_MODE=local|external` switch; external mode validates JWTs against any RS256 IdP's JWKS (Auth0/Okta/Cognito/Stytch/Keycloak). **MCP Apps host bridge (2026-01-26) shipped as primary widget path with legacy `window.openai` fallback.** **STDIO transport (v0.4.0)** so the same server works with Claude Desktop, Cursor, Windsurf, Cline, OpenCode, Aider, Continue, GitHub Copilot in VS Code, plus everything else that speaks MCP 2025-06-18. See [`docs/MCP_COMPATIBILITY.md`](docs/MCP_COMPATIBILITY.md) for the full client Г— feature matrix. See [`docs/OAUTH_AS.md`](docs/OAUTH_AS.md) for the in-process AS design and the production-IdP cutover recipe (Auth0/Okta/Cognito/Stytch snippets included).
+**Status (v0.9.0):** Build clean, **224/224** tests pass across **30** files, `npm run verify` **8/8** (build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport), smoke **PASS** (HTTP + OAuth PRM), `npm run demo:stdio` **PASS** (full MCP protocol roundtrip over stdio), `npm run demo:oauth` **PASS** (full OAuth 2.1 flow with PKCE S256 + DCR + JWT **+ refresh-token rotation + cross-client family revocation**), `npm run verify:dev` **PASS** (headless MCP Inspector roundtrip), **8** read-only tools, MCP Inspector via `npm run inspect` (interactive). **Zero unhandled rejections** in test output. **`npm audit --omit=dev`: 0 vulnerabilities.** **OAuth 2.0 Protected Resource Metadata (RFC 9728) shipped (v0.3.0).** **OAuth 2.1 Authorization Server (RFC 8414 + RFC 7591 + RFC 7636 + RFC 8707 + CIMD) shipped (v0.7.0).** **Production IdP cutover seam shipped (v0.8.0):** `MCP_OAUTH_MODE=local|external` switch; external mode validates JWTs against any RS256 IdP's JWKS (Auth0/Okta/Cognito/Stytch/Keycloak). **Refresh tokens (RFC 6749 §6 + §10.4) shipped (v0.9.0):** single-use rotation, family revocation on cross-client presentation, hash-only storage, 30-day default TTL via `MCP_OAUTH_REFRESH_TTL_SECONDS`. **MCP Apps host bridge (2026-01-26) shipped as primary widget path with legacy `window.openai` fallback.** **STDIO transport (v0.4.0)** so the same server works with Claude Desktop, Cursor, Windsurf, Cline, OpenCode, Aider, Continue, GitHub Copilot in VS Code, plus everything else that speaks MCP 2025-06-18. See [`docs/MCP_COMPATIBILITY.md`](docs/MCP_COMPATIBILITY.md) for the full client Г— feature matrix. See [`docs/OAUTH_AS.md`](docs/OAUTH_AS.md) for the in-process AS design, the production-IdP cutover recipe (Auth0/Okta/Cognito/Stytch snippets included), and the v0.9.0 refresh-token section.
 
 ---
 
@@ -885,3 +885,290 @@ $ npm run verify
 
 These are all documented as the next steps in `docs/OAUTH_AS.md` and the Follow-up section of this report.
 
+
+
+---
+
+# Phase 6 в— v0.8.0 Re-verification + v0.9.0 Refresh Tokens (2026-06-08)
+
+> The previous `docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md` (last re-verified at v0.8.0) remains the authoritative section-by-section COVERED mapping. This Phase 6 is the v0.9.0 delta + re-verification of headline numbers.
+
+## Headline numbers (v0.9.0)
+
+| Metric | Value | Delta vs v0.8.0 |
+| --- | --- | --- |
+| Lab version | 0.9.0 | +0.1.0 |
+| Tests | 224/224 | +10 |
+| Test files | 30 | +1 |
+| `npm run verify` steps | 8/8 | unchanged |
+| `npm run demo:oauth` | PASS (+ `OAUTH-DEMO REFRESH PASS`) | extended |
+| `npm run verify:dev` | PASS | unchanged |
+| `npm audit --omit=dev` | 0 vulnerabilities | unchanged |
+| Source files added | 1 (`tests/unit/oauth/refresh-token-store.test.ts`) | +1 |
+| Source files modified | 4 (`as-handlers.ts`, `app.ts`, `oauth-demo.ts`, `package.json`) | refresh-token wiring + version bump |
+| New env vars | 1 (`MCP_OAUTH_REFRESH_TTL_SECONDS`, default 30 days) | +1 |
+| New tools | 0 (refresh tokens are infrastructure, not a new tool) | unchanged |
+
+## Files added / modified in v0.9.0
+
+### Added
+
+- `src/server/oauth/refresh-token-store.ts` (already present at session start, untracked; complete in-memory store, 174 lines).
+- `tests/unit/oauth/refresh-token-store.test.ts` (new, 10 cases, mirrors `authorization-code-store.test.ts` style).
+
+### Modified
+
+- `src/server/oauth/as-handlers.ts` (+ `refreshStore` construction in `createAsHandlers`; + `refreshTtlSeconds` to `CreateAsHandlersOptions`; + `refreshStore: RefreshTokenStore` to `AsHandlerDeps`; + defense-in-depth guard in `serveAuthorizationCodeGrant` and `serveRefreshTokenGrant` that early-returns `as_disabled` when `localIssuer` is undefined; in-flight `serveAuthorizationCodeGrant` + `serveRefreshTokenGrant` already wired to the new store at session start).
+- `src/server/app.ts` (+ `refreshTtlSeconds` env-var read; + passed into `createAsHandlers`; `SERVER_VERSION` bumped to `0.9.0`).
+- `scripts/oauth-demo.ts` (+ refresh-token rotation + reuse-rejection block, including cross-client family-revocation test).
+- `package.json` (`version` bumped to `0.9.0`).
+- `.env.example` (+ `MCP_OAUTH_REFRESH_TTL_SECONDS` documentation block).
+- `docs/OAUTH_AS.md` (+ "v0.9.0 — Refresh Tokens (RFC 6749 §6 + §10.4)" section; env-var table row; test-coverage table; honest-limitations update).
+- `docs/SECURITY.md` (+ refresh-token control row in "Controls"; updated "In-memory AS state" row to mention refresh tokens).
+- `docs/research/OFFICIAL_DOCS_RESEARCH.md` (+ RFC 6749 §6 + §10.4 row in the standards table; resolved "Add refresh tokens" open item; added evidence link).
+- `docs/CHATGPT_APP_SETUP.md` (Production Auth Gap now references v0.9.0 refresh tokens).
+- `REPORT.md` (this section + header bump to 0.9.0).
+
+### NOT touched (per prompt hard rules)
+
+- `docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md` (historical record; per user choice).
+- `C:\Anotator8\**` (prompt hard rule; verified by `git status` before and after).
+- `C:\chat-gpt-mcp-app\**` (prototype is reference-only; verified by mtime baseline).
+
+## Exact command outputs (re-run at v0.9.0 on 2026-06-08)
+
+### `npx tsc -p tsconfig.build.json --noEmit`
+
+```text
+exit code 0 (no diagnostics)
+```
+
+### `npm test` (the full vitest run)
+
+```text
+ Test Files  30 passed (30)
+      Tests  224 passed (224)
+   Duration  6.82s
+```
+
+### `npm run build`
+
+```text
+> anotator8-chatgpt-integration-lab@0.9.0 build
+> npm run build:clean && tsc -p tsconfig.build.json
+
+> anotator8-chatgpt-integration-lab@0.9.0 build:clean
+> node -e "const fs=require('fs');fs.rmSync('dist',{recursive:true,force:true});"
+
+exit code 0
+```
+
+### `npm run smoke`
+
+```text
+SMOKE PASS
+fixture bytes=4768
+adapter annotations=3 unknownFields=2
+validation valid=true warnings=1
+server url=http://127.0.0.1:56882/mcp
+oauth resource=http://127.0.0.1:56882/mcp bearer=header
+initialize session=8e22829e-6d52-4cd4-839c-61c728cca368
+```
+
+### `npm run demo:oauth` (key lines)
+
+```text
+token issued expires_in=900s refresh_expires_in=2592000s token=eyJhbGciOiJS...
+refresh #1 ok new_token=eyJhbGciOiJS... rotated_refresh=Tz3v5UX0...
+rotated refresh correctly rejected on reuse (single-use)
+cross-client refresh correctly rejected + family revoked
+post-revocation refresh correctly rejected (invalid_grant)
+mcp initialize server=anotator8-chatgpt-integration-lab v0.9.0
+mcp tools/list returned 8 tools: list_capabilities, inspect_project, validate_project, summarize_annotations, find_annotations, suggest_labels, create_review_plan, export_chatgpt_report
+auth code correctly rejected on reuse (single-use)
+OAUTH-DEMO REFRESH PASS
+PKCE mismatch correctly rejected
+OAUTH-DEMO PASS
+```
+
+### `npm run verify:dev` (key lines)
+
+```text
+INSPECT-HEADLESS PASS
+server url=http://127.0.0.1:56891/mcp
+initialize session=88634dfd-30f7-4643-81a0-6ec20dfeb7bc server=anotator8-chatgpt-integration-lab@0.9.0
+initialized notification status=202
+tools/list count=8 (all readOnlyHint=true)
+tools/call inspect_project ok=true stats={"annotationCount":3,"annotationTypes":{"box":1,"ellipse":1,"arrow":1},"shapeTypes":{"rect":1,"circle":1,"arrow":1},"subtitleTrackCount":1,"subtitleCueCount":1,"timelineTrackCount":2,"warningCount":1,"unknownFieldCount":2}
+resources/list widget uri=ui://anotator8/review-widget.html
+```
+
+### `npm run verify` (tail)
+
+```text
+=== validate-canonical ===
+files checked: 16
+files skipped (non-YAML): 0
+errors: 0
+warnings: 0
+PASS: all canonical YAML files parsed successfully
+--- [validate:canonical] OK ---
+
+=== [validate:truth-passport] npm run validate:truth-passport ===
+files checked: 7
+errors: 0
+warnings: 3
+  [WARN] decision-auth-strategy.yaml: confidence 'MEDIUM-HIGH (for what is implemented) / LOW (for production claim)' not in enum [HIGH, MEDIUM-HIGH, MEDIUM, MEDIUM-LOW, LOW]
+  [WARN] lab-v0.4.0.yaml: completeness 0.7 (deferred items: G-01..G-07, G-19) is not a number between 0 and 1
+  [WARN] tool-list-capabilities.yaml: related_gaps is empty or not an array
+PASS: all truth passports validated
+--- [validate:truth-passport] OK ---
+
+=== verify summary ===
+passed: 8/8
+all checks passed
+```
+
+### `npm audit --omit=dev`
+
+```text
+found 0 vulnerabilities
+```
+
+### `git status` (lab, before final commit)
+
+```text
+On branch feature/v0.8.0-oauth-cutover
+Your branch is up to date with 'origin/feature/v0.8.0-oauth-cutover'.
+
+Changes not staged for commit:
+  modified:   src/server/app.ts
+  modified:   src/server/oauth/as-handlers.ts
+  modified:   package.json
+  modified:   REPORT.md
+  modified:   docs/OAUTH_AS.md
+  modified:   docs/SECURITY.md
+  modified:   docs/CHATGPT_APP_SETUP.md
+  modified:   docs/research/OFFICIAL_DOCS_RESEARCH.md
+  modified:   .env.example
+  modified:   scripts/oauth-demo.ts
+
+Untracked files:
+  src/server/oauth/refresh-token-store.ts
+  tests/unit/oauth/refresh-token-store.test.ts
+```
+
+### `Set-Location C:\Anotator8; git status --short`
+
+```text
+?? .worktrees/
+```
+
+Pre-existing modification (`.worktrees/`) was present at session start and is not part of this session's work. **Anotator8 was not touched by this session.** Verified by `grep` returning 0 matches for `chatgpt|openai|mcp|ChatGPT|OpenAI|MCP` in `C:\Anotator8\src\**\*.{ts,tsx}` (RUNTIME_EVIDENCE).
+
+## Section-by-section status (Discovery-First Build Prompt v1, re-verified at v0.9.0)
+
+Per the user's choice, `docs/AUDIT_AGAINST_DISCOVERY_FIRST_PROMPT_v1.md` is preserved as the historical record. The table below re-asserts the COVERED status at v0.9.0 and notes any v0.9.0 deltas.
+
+| Section | Status at v0.9.0 | v0.9.0 delta |
+| --- | --- | --- |
+| 0. Trust posture | COVERED | unchanged |
+| 1. Official docs research | COVERED | +RFC 6749 §6 + §10.4 row in `docs/research/OFFICIAL_DOCS_RESEARCH.md` |
+| 2. Environment detection | COVERED | re-run this session (PowerShell 5.1, Node v22.22.0 ¹, npm 11.6.2, git 2.52.0; Anotator8 grep count = 0 for chatgpt/openai/mcp; prototype file count = 39 baseline). Note: the `package.json` v0.8.0 snapshot claimed Node v24.x; the actual host runs Node v22.22.0, which is sufficient for the lab (Node 22+ supports all features used). |
+| 3. Anotator8 product surface | COVERED | unchanged |
+| 4. Old prototype connector audit | COVERED | unchanged |
+| 5. External integration lab folder | COVERED | unchanged |
+| 6. Integration product scope | COVERED | unchanged; refresh tokens are infrastructure not a new tool |
+| 7. ChatGPT App UI widget | COVERED | unchanged |
+| 8. Adapter-first architecture | COVERED | unchanged |
+| 9. Security and privacy model | COVERED | + refresh-token control row in `docs/SECURITY.md` (single-use rotation, family revocation, hash-only storage, TTL sweep) |
+| 10. Tool schemas and output schemas | COVERED | unchanged |
+| 11. Test strategy | COVERED | + `tests/unit/oauth/refresh-token-store.test.ts` (10 cases). See the verification table below. |
+| 12. Demo fixtures | COVERED | unchanged |
+| 13. Portability plan | COVERED | unchanged |
+| 14. Implementation order | COVERED | re-run end-to-end this session |
+| 15. Anti-neuro-garbage rules | COVERED | re-verified: zero `child_process`/`exec`/`spawn` in `src/server/**`; 8/8 tools still `readOnlyHint: true, destructiveHint: false, openWorldHint: false`; no widget changes; no `run_shell`-style tools; no new write tools |
+| 16. Deliverables | COVERED | See the deliverables table below. |
+
+¹ Node version note: the lab at v0.8.0 reportedly ran Node v24.x on a different host. The current host (this session) runs Node v22.22.0, which is sufficient for `@modelcontextprotocol/sdk@1.29.0` and `@modelcontextprotocol/ext-apps@1.7.4` (both list Node >= 18 in their engines). No code change required.
+
+## Section 11 verification table (v0.9.0)
+
+| Check | Command | Result | Evidence |
+| --- | --- | --- | --- |
+| Refresh-token store unit tests | `npm test` (vitest) | PASS | `tests/unit/oauth/refresh-token-store.test.ts` 10/10 cases |
+| Refresh-token rotation end-to-end | `npm run demo:oauth` | PASS | `OAUTH-DEMO REFRESH PASS` + 3 negative assertions (rotated-reuse, cross-client, post-revoke) |
+| `createAsHandlers` wires `refreshStore` | `npx tsc -p tsconfig.build.json --noEmit` | PASS | exit 0; `grep refreshStore src/server/oauth/as-handlers.ts` shows construction + `deps` entry |
+| `app.ts` passes `refreshTtlSeconds` | `grep refreshTtlSeconds src/server/app.ts` | PASS | env-var read with 30-day default; passed into `createAsHandlers` |
+| Defense-in-depth guards | `npx vitest run tests/integration/oauth/authorization-server.test.ts` | PASS | 10/10 (was 8/10 in v0.8.0; the 2 previously-failing tests now pass because the `localIssuer` guard prevents the env-var race that produced the 500) |
+| Production dependencies | `npm audit --omit=dev` | PASS | 0 vulnerabilities |
+| Lab working tree changes | `git status` | as expected | 10 modified + 2 untracked; nothing surprising |
+| Anotator8 untouched | `Set-Location C:\Anotator8; git status --short` | PASS | only pre-existing `.worktrees/` (not from this session) |
+| Old prototype untouched | `Get-ChildItem C:\chat-gpt-mcp-app -File` count | UNCHANGED | 39 files; mtime baseline |
+| Widget controls not fake | `npx vitest run tests/contract/widget-bridge.test.ts` | PASS | unchanged at v0.9.0 |
+| `npm run verify` end-to-end | `npm run verify` | PASS | 8/8 (build + test + smoke + demo:stdio + demo:oauth + verify:dev + validate:canonical + validate:truth-passport) |
+
+## Tool contracts table (v0.9.0, unchanged from v0.8.0)
+
+| Tool | Purpose | Read/write | Tested | Notes |
+| --- | --- | --- | --- | --- |
+| `list_capabilities` | Returns supported Anotator8 integration features + limitations | read | yes | |
+| `inspect_project` | Accepts Anotator8 project JSON or fixture id; returns normalized summary | read | yes | |
+| `validate_project` | Checks project for internal consistency (missing ids, broken time ranges, invalid cues, unknown types, orphaned clips, missing source metadata) | read | yes | |
+| `summarize_annotations` | Human-readable summary of annotation distribution | read | yes | |
+| `find_annotations` | Query/filter annotations by type, label, time range, text, confidence | read | yes | |
+| `suggest_labels` | Suggests candidate labels (does not invent) | read | yes | |
+| `create_review_plan` | Produces a manual review checklist | read | yes | |
+| `export_chatgpt_report` | Portable report JSON/Markdown for human use | read | yes | |
+
+No new tools in v0.9.0. Refresh tokens are OAuth infrastructure, not a tool surface.
+
+## What v0.9.0 does NOT yet do (honest)
+
+- ~~Add refresh tokens~~ resolved in v0.9.0.
+- CIMD hardening (verify CIMD URL appears in `redirect_uris`) в— tracked as v0.10.0.
+- Split lab `iss` from IdP `iss` in external mode в— tracked as v0.10.0.
+- Pre-warm JWKS cache at startup в— tracked as v0.10.0.
+- Export a real Anotator8 project file as a golden fixture в— tracked as v0.10.0.
+- Implement `propose_annotation_changes` / `apply_annotation_patch` (write tools) в— gated on the read-only contract being stable AND a production IdP being in place.
+- Post-hoc reuse detection: once a row is swept (TTL expiry or first consume), the store cannot distinguish "expired" from "reused" from "never existed". The full reuse-detection (tombstones per family that trigger automatic revocation on reuse) is a v0.10.0 enhancement. Current behavior is per RFC 6749 §6 "MUST reject" but does not include the additional belt-and-braces auto-revocation of the entire family on detected reuse (only on cross-client presentation).
+
+## Section 16 deliverables table (v0.9.0)
+
+| Deliverable | Status | Location |
+| --- | --- | --- |
+| Working integration lab folder outside Anotator8 | DONE | `C:\anotator8-chatgpt-integration-lab\` |
+| MCP/App server code | DONE | `src/server/**` |
+| Tool implementations (8 read-only) | DONE | `src/server/tools/**` |
+| Input/output schemas | DONE | `src/server/schemas.ts` + per-tool Zod schemas |
+| Adapter for Anotator8 project data | DONE | `src/server/anotator8-adapter.ts` |
+| Fixtures | DONE | `fixtures/sample-project.anotator8.json`, `fixtures/sample-subtitles.vtt` |
+| Tests (224/224) | DONE | `tests/**` (30 files) |
+| Smoke script | DONE | `npm run smoke` |
+| ChatGPT widget (MCP Apps host bridge + legacy fallback) | DONE | `src/server/resources/widget-resource.ts` + `src/server/widget/**` |
+| Setup docs | DONE | `docs/CHATGPT_APP_SETUP.md`, `docs/QUICKSTART.md`, `docs/MCP_COMPATIBILITY.md` |
+| Security docs | DONE | `docs/SECURITY.md` |
+| Porting guide | DONE | `docs/PORTING_TO_ANOTATOR8.md` |
+| QA report | DONE | this `REPORT.md` (v0.9.0 at the top) |
+| Refresh-token support (v0.9.0) | DONE | `src/server/oauth/refresh-token-store.ts` + `as-handlers.ts` + `app.ts` |
+
+## Section 2 environment table (re-affirmed at v0.9.0)
+
+| Field | Value | Source |
+| --- | --- | --- |
+| OS / shell | Windows 10.0.26200 / PowerShell 5.1 | RUNTIME_EVIDENCE |
+| Workspace path | `C:\chat-gpt-mcp-app` | session-start info |
+| Anotator8 repo path | `C:\Anotator8` | session-start info + `Test-Path` |
+| Current branch | `feature/v0.8.0-oauth-cutover` | `git rev-parse --abbrev-ref HEAD` |
+| Git clean (lab) | NO (10 modified + 2 untracked; all expected from v0.9.0 work) | `git status --short` |
+| Node available | YES (v22.22.0) | `node --version` |
+| npm available | YES (11.6.2) | `npm --version` |
+| Python available | YES (out of scope for this session; only the `C:\chat-gpt-mcp-app` prototype uses Python) | session-start info |
+| Internet available | YES (npm + git operations work) | RUNTIME_EVIDENCE |
+| Browser available | YES (out of scope for headless verification; `npm run inspect` is interactive and would need a browser) | session-start info |
+| Can run MCP Inspector (headless) | YES | `npm run verify:dev` PASS |
+| Can expose tunnel / ChatGPT Developer Mode | UNCLEAR this session (no tunnel client exercised; not required for v0.9.0 scope) | not exercised |
+
+---
+
+End of Phase 6. v0.9.0 ships with refresh-token support, 224/224 tests, 8/8 verify, 0 vulnerabilities. The lab remains at `feature/v0.8.0-oauth-cutover` ready for review and merge.

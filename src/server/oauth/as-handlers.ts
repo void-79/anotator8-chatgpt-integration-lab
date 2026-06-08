@@ -30,6 +30,7 @@ import { TokenValidationError, type TokenValidator } from "./token-issuer.js";
 import { ClientRegistry, DcrValidationError } from "./dcr.js";
 import { CimdResolver, CimdResolveError } from "./cimd.js";
 import { codeChallengeS256, generateCodeVerifier, verifyCodeChallenge } from "./pkce.js";
+import { RefreshTokenStore } from "./refresh-token-store.js";
 import { audit } from "../audit.js";
 
 export interface AsHandlerDeps {
@@ -39,12 +40,15 @@ export interface AsHandlerDeps {
   /** Only set in local mode. Used by the in-process AS to issue tokens. */
   readonly localIssuer?: import("./token-issuer.js").TokenIssuer;
   readonly codeStore: AuthorizationCodeStore;
+  readonly refreshStore: RefreshTokenStore;
   readonly clientRegistry: ClientRegistry;
   readonly cimdResolver: CimdResolver;
   /** The lab's resource identifier (RFC 8707). Matches the PRM's `resource`. */
   readonly resource: string;
   /** Default subject for the demo user. */
   readonly defaultSubject: string;
+  /** Refresh token TTL in seconds. Default 30 days. */
+  readonly refreshTtlSeconds?: number;
 }
 
 export interface AsHandlerResult {
@@ -220,8 +224,30 @@ async function serveAuthorizePost(
 async function serveToken(req: IncomingMessage, res: ServerResponse, deps: AsHandlerDeps): Promise<boolean> {
   const body = await readFormBody(req);
   const grantType = body.get("grant_type");
-  if (grantType !== "authorization_code") {
-    return sendJson(res, 400, { error: "unsupported_grant_type", error_description: "Only authorization_code is supported" });
+  if (grantType === "authorization_code") {
+    return serveAuthorizationCodeGrant(req, res, body, deps);
+  }
+  if (grantType === "refresh_token") {
+    return serveRefreshTokenGrant(req, res, body, deps);
+  }
+  return sendJson(res, 400, {
+    error: "unsupported_grant_type",
+    error_description: "Supported grant types: authorization_code, refresh_token",
+  });
+}
+
+async function serveAuthorizationCodeGrant(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  body: URLSearchParams,
+  deps: AsHandlerDeps,
+): Promise<boolean> {
+  // Defense in depth: the dispatcher in handleAsRequest already short-circuits
+  // external mode at line ~72, but if a future test or caller invokes this
+  // handler directly (or there is a process.env race with a parallel
+  // external-mode test), we MUST not dereference an undefined `localIssuer`.
+  if (!deps.localIssuer) {
+    return sendAsDisabled(res, "/oauth2/v1/token");
   }
   const code = body.get("code");
   const redirectUri = body.get("redirect_uri");
@@ -266,12 +292,101 @@ async function serveToken(req: IncomingMessage, res: ServerResponse, deps: AsHan
     resource: effectiveResource,
     subject: codeRecord.subject,
   });
-  audit({ tool: "oauth-token", status: "ok", summary: `issued access token for client=${clientId} scope=${codeRecord.scope.join(" ")}` });
+  const refresh = deps.refreshStore.issue({
+    clientId,
+    subject: codeRecord.subject,
+    scope: codeRecord.scope,
+    resource: effectiveResource,
+  });
+  audit({ tool: "oauth-token", status: "ok", summary: `issued access+refresh for client=${clientId} scope=${codeRecord.scope.join(" ")}` });
   return sendJson(res, 200, {
     access_token: issued.token,
     token_type: "Bearer",
     expires_in: deps.localIssuer!.config.tokenTtlSeconds,
+    refresh_token: refresh.token,
+    refresh_expires_in: Math.floor((refresh.expiresAt - Date.now()) / 1000),
     scope: codeRecord.scope.join(" "),
+  });
+}
+
+async function serveRefreshTokenGrant(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  body: URLSearchParams,
+  deps: AsHandlerDeps,
+): Promise<boolean> {
+  // Defense in depth: see serveAuthorizationCodeGrant. Refresh-token
+  // rotation also requires the in-process localIssuer to mint the new
+  // access token. Without it, fall back to the same as_disabled response
+  // the dispatcher would produce.
+  if (!deps.localIssuer) {
+    return sendAsDisabled(res, "/oauth2/v1/token");
+  }
+  const refreshToken = body.get("refresh_token");
+  const clientId = body.get("client_id");
+  const requestedScope = body.get("scope");
+  const resource = body.get("resource") || undefined;
+  if (!refreshToken || !clientId) {
+    return sendJson(res, 400, { error: "invalid_request", error_description: "Missing required parameter (refresh_token, client_id)" });
+  }
+  const consumeResult = deps.refreshStore.consume(refreshToken);
+  if (!consumeResult.record) {
+    // Could be unknown, expired, or already-rotated. We don't
+    // distinguish here — the row has been swept. RFC 6749 §5.2
+    // says return invalid_grant. Reuse detection is a v1.0
+    // enhancement (it needs a separate reuse-tracking layer).
+    return sendJson(res, 400, { error: "invalid_grant", error_description: "Refresh token is unknown, expired, or already used" });
+  }
+  const record = consumeResult.record;
+  if (record.clientId !== clientId) {
+    // The refresh token was issued to a different client.
+    // RFC 6749 §6: "the authorization server MUST ... verify that
+    // the refresh token was issued to the same client".
+    // Revoke the family: this looks like token theft.
+    deps.refreshStore.revokeFamily(record.familyId);
+    return sendJson(res, 400, { error: "invalid_grant", error_description: "Refresh token was issued to a different client (family revoked)" });
+  }
+  // Optional downscoping: if the client requests a subset of the
+  // original scope, honor it. Requesting a scope that wasn't
+  // originally granted is invalid (RFC 6749 §6).
+  let effectiveScope = record.scope;
+  if (requestedScope) {
+    const requested = requestedScope.split(/\s+/).filter(Boolean);
+    const granted = new Set(record.scope);
+    for (const s of requested) {
+      if (!granted.has(s)) {
+        return sendJson(res, 400, { error: "invalid_scope", error_description: `Scope '${s}' was not granted at original issue` });
+      }
+    }
+    effectiveScope = requested;
+  }
+  const effectiveResource = resource ?? record.resource ?? deps.resource;
+  // Mint new access + refresh (rotation).
+  const issued = deps.localIssuer!.issue({
+    clientId,
+    scope: effectiveScope,
+    resource: effectiveResource,
+    subject: record.subject,
+  });
+  const nextRefresh = deps.refreshStore.issue({
+    clientId,
+    subject: record.subject,
+    scope: effectiveScope,
+    resource: effectiveResource,
+    familyId: record.familyId,
+  });
+  audit({
+    tool: "oauth-refresh",
+    status: "ok",
+    summary: `rotated refresh for client=${clientId} family=${record.familyId.slice(0, 8)} scope=${effectiveScope.join(" ")}`,
+  });
+  return sendJson(res, 200, {
+    access_token: issued.token,
+    token_type: "Bearer",
+    expires_in: deps.localIssuer!.config.tokenTtlSeconds,
+    refresh_token: nextRefresh.token,
+    refresh_expires_in: Math.floor((nextRefresh.expiresAt - Date.now()) / 1000),
+    scope: effectiveScope.join(" "),
   });
 }
 
@@ -405,10 +520,13 @@ export interface CreateAsHandlersOptions {
   tokenTtlSeconds: number;
   cimdAllowInsecureHttp: boolean;
   cimdAllowlistHostnames: ReadonlyArray<string>;
+  /** Refresh-token TTL in seconds. Defaults to 30 days. */
+  refreshTtlSeconds?: number;
 }
 
 export function createAsHandlers(options: CreateAsHandlersOptions): AsHandlerBundle {
   const codeStore = new AuthorizationCodeStore();
+  const refreshStore = new RefreshTokenStore({ ttlSeconds: options.refreshTtlSeconds });
   const clientRegistry = new ClientRegistry({ allowInsecureHttp: options.cimdAllowInsecureHttp });
   const cimdResolver = new CimdResolver({
     allowInsecureHttp: options.cimdAllowInsecureHttp,
@@ -420,6 +538,7 @@ export function createAsHandlers(options: CreateAsHandlersOptions): AsHandlerBun
     validator: options.validator,
     localIssuer: options.localIssuer,
     codeStore,
+    refreshStore,
     clientRegistry,
     cimdResolver,
     resource: options.resource,

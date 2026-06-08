@@ -112,6 +112,93 @@ The lab **does not** issue refresh tokens in v0.7.0 (intentional,
 documented limitation). The token TTL is 15 minutes by default; tune
 with `MCP_OAUTH_TOKEN_TTL` (seconds).
 
+## v0.9.0 — Refresh Tokens (RFC 6749 §6 + §10.4)
+
+The lab now issues refresh tokens alongside access tokens in the
+authorization-code grant. Clients may exchange a valid refresh token
+for a new access token **and** a new refresh token (rotation), without
+re-running the full authorize-consent round trip.
+
+### Wire format
+
+| Field | Value | Notes |
+| --- | --- | --- |
+| Token transport | 256 bits of randomness, base64url-encoded → 43 chars | RFC 6749 §10.4 — high-entropy opaque token |
+| Storage | SHA-256 hash, base64url | The store **never** persists plaintext; a memory dump does not yield valid refresh tokens |
+| TTL | `MCP_OAUTH_REFRESH_TTL_SECONDS`, default `2592000` (30 days) | Per-family; cannot exceed the in-process store's lifetime |
+| Scope | Same as the original access token, or a subset (downscoping) | RFC 6749 §6 — requested scope must be a subset of the original grant |
+| Cross-client | Forbidden | RFC 6749 §6 — the lab revokes the family on cross-client presentation |
+
+### Grant / response
+
+`POST /oauth2/v1/token` now accepts two grant types:
+
+| `grant_type` | Effect |
+| --- | --- |
+| `authorization_code` | New: returns both `access_token` **and** `refresh_token` (and `refresh_expires_in` in seconds) |
+| `refresh_token` | Validates the presented refresh token, rotates it (issues a new pair), and updates the family |
+
+Example code-grant response:
+
+```json
+{
+  "access_token": "eyJhbGciOiRS...",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "refresh_token": "jB0NIe6c...",
+  "refresh_expires_in": 2592000,
+  "scope": "mcp:read"
+}
+```
+
+### Rotation and revocation
+
+| Scenario | Lab behavior |
+| --- | --- |
+| First use of a refresh token | Returns new `access_token` + new `refresh_token`; old refresh is deleted (single-use) |
+| Re-presentation of a consumed refresh token | `400 invalid_grant` (the row has been swept; the lab cannot distinguish "expired" from "reused" once the row is gone — see the comment in `src/server/oauth/refresh-token-store.ts:121`) |
+| Refresh presented to a different `client_id` | `400 invalid_grant` and **the entire family is revoked** via `revokeFamily()` (RFC 6749 §6 + §10.4 best practice: treat cross-client presentation as stolen-token replay) |
+| Refresh past its `expiresAt` | `400 invalid_grant` (TTL sweep runs on every `consume()`; no background job) |
+| Cross-client refresh attempt | `400 invalid_grant` with `error_description` containing `"family revoked"` |
+
+The **family** is a UUID threaded through every rotated token. All
+descendants of an original token share the family id. `revokeFamily()`
+deletes every row in the family; the next consume() returns `{}`.
+
+### External mode
+
+In `MCP_OAUTH_MODE=external`, the lab does **not** issue refresh
+tokens — the IdP does. The lab's `serveRefreshTokenGrant` early-returns
+`as_disabled` in external mode. Clients that need long sessions in
+external mode should use refresh tokens issued by the IdP directly,
+or use the IdP's SDK to maintain their session.
+
+### Defense-in-depth guards
+
+The in-flight v0.9.0 work also adds an early-return guard in both
+`serveAuthorizationCodeGrant` and `serveRefreshTokenGrant`: if
+`localIssuer` is undefined (i.e. the factory is in external mode but
+the dispatcher guard was bypassed by a test/env race), the handler
+returns the same `404 as_disabled` response the dispatcher would
+produce. This is documented in the source code at
+`src/server/oauth/as-handlers.ts:serveAuthorizationCodeGrant` and
+`:serveRefreshTokenGrant`.
+
+### Demo
+
+`npm run demo:oauth` now exercises the full refresh flow end-to-end:
+
+```text
+token issued expires_in=900s refresh_expires_in=2592000s token=eyJhbGciOiRS...
+refresh #1 ok new_token=eyJhbGciOiRS... rotated_refresh=jB0NIe6c...
+rotated refresh correctly rejected on reuse (single-use)
+cross-client refresh correctly rejected + family revoked
+post-revocation refresh correctly rejected (invalid_grant)
+OAUTH-DEMO REFRESH PASS
+```
+
+
+
 ## Configuration reference
 
 | Env var | Default | Purpose |
@@ -124,6 +211,7 @@ with `MCP_OAUTH_TOKEN_TTL` (seconds).
 | `MCP_OAUTH_DEFAULT_SUBJECT` | `demo-user` | The `sub` claim when none is provided (local mode only) |
 | `MCP_OAUTH_DEFAULT_SCOPE` | `mcp:read` | Default scope when `MCP_OAUTH_REQUIRE_AUTH=true` |
 | `MCP_OAUTH_TOKEN_TTL` | `900` | Token lifetime in seconds (local mode only) |
+| `MCP_OAUTH_REFRESH_TTL_SECONDS` | `2592000` (30 days) | Refresh-token lifetime in seconds (local mode only). **v0.9.0** |
 | `MCP_OAUTH_REQUIRE_AUTH` | `false` | Force every tool to require a Bearer JWT |
 | `MCP_OAUTH_CIMD_SUPPORTED` | `true` | Advertise `client_id_metadata_document_supported: true` |
 | `MCP_OAUTH_CIMD_ALLOWLIST` | (empty) | Comma-separated hostnames; CIMD URLs not on this list are rejected |
@@ -133,7 +221,7 @@ with `MCP_OAUTH_TOKEN_TTL` (seconds).
 
 ## Test coverage
 
-The implementation has ~86 new test cases across 9 test files (v0.7.0 + v0.8.0):
+The implementation has ~96 new test cases across 10 test files (v0.7.0 + v0.8.0 + v0.9.0):
 
 - `tests/unit/oauth/pkce.test.ts` (10)
 - `tests/unit/oauth/jwks.test.ts` (8)
@@ -147,6 +235,7 @@ The implementation has ~86 new test cases across 9 test files (v0.7.0 + v0.8.0):
 - `tests/unit/oauth/remote-issuer.test.ts` (7) **v0.8.0**
 - `tests/unit/oauth/issuer-factory.test.ts` (5) **v0.8.0**
 - `tests/integration/oauth/external-mode-as-disabled.test.ts` (4) **v0.8.0**
+- `tests/unit/oauth/refresh-token-store.test.ts` (10) **v0.9.0**
 
 Plus the end-to-end `npm run demo:oauth` script.
 
@@ -260,13 +349,20 @@ and `src/server/auth.ts` to call the IdP's `/userinfo` for
   RS256 IdP. Key rotation is supported via forced refetch on
   `kid` miss.
 
-### Still open in v0.8.0
+### Resolved in v0.9.0
 
-- **In-memory state.** Authorization codes and registered clients
-  are lost on process restart. (Local mode only. In external mode
-  the IdP owns this state.)
-- **No refresh tokens.** Clients re-authorize when the access token
-  expires. The 15-minute TTL is short enough to be safe in a demo.
+- ~~**No refresh tokens.**~~ Resolved in v0.9.0. The lab now issues,
+  rotates, and revokes refresh tokens per RFC 6749 §6 / §10.4. See
+  the [v0.9.0 section](#v090--refresh-tokens-rfc-6749--6--104) above.
+- ~~**CIMD is partially implemented.**~~ The resolver still does not
+  verify the CIMD URL appears in `redirect_uris`; tracked as a v0.10.0
+  follow-up.
+
+### Still open in v0.9.0
+
+- **In-memory state.** Authorization codes, registered clients, and
+  refresh tokens are all lost on process restart. (Local mode only. In
+  external mode the IdP owns this state.)
 - **No consent audit.** The consent page POSTs `decision=allow` and
   the lab always grants. A real IdP records the user's decision.
 - **The `code_challenge_method` is `S256` only.** RFC 7636 allows
@@ -277,12 +373,18 @@ and `src/server/auth.ts` to call the IdP's `/userinfo` for
 - **CIMD is partially implemented.** The resolver validates the
   document and caches it, but does not verify that the CIMD URL
   itself appears in the `redirect_uris` list (a recommended
-  hardening per the latest draft). Tracked as a v0.9.0 follow-up.
+  hardening per the latest draft). Tracked as a v0.10.0 follow-up.
 - **External mode requires the lab `iss` to equal the IdP `iss`.**
-  In v0.8.0 the lab's `MCP_OAUTH_ISSUER` is the IdP's issuer URL;
-  there is no separate "resource issuer" / "AS issuer" distinction
-  yet. Splitting these is a v0.9.0 conversation.
+  In v0.8.0/v0.9.0 the lab's `MCP_OAUTH_ISSUER` is the IdP's issuer
+  URL; there is no separate "resource issuer" / "AS issuer"
+  distinction yet. Splitting these is a v0.10.0 conversation.
 - **External mode does not fetch JWKS at startup.** The first
   `/mcp` request triggers the fetch; if the IdP is down at that
   moment the first request 401s. Acceptable for a demo, but for
   production health probes should pre-warm the cache.
+- **Refresh-token reuse cannot be detected post-hoc.** Once a row
+  is swept (TTL expiry or first consume), the store cannot tell
+  "expired" from "reused" from "never existed" — the lab's
+  `serveRefreshTokenGrant` returns `invalid_grant` for all three.
+  Full reuse-detection (a tombstone per family that triggers
+  automatic revocation on reuse) is a v0.10.0 enhancement.

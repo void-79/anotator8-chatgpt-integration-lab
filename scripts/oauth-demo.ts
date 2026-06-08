@@ -193,15 +193,110 @@ async function main(): Promise<void> {
     assert(typeof token.json.expires_in === "number", "Token response must have expires_in");
     const accessToken = token.json.access_token as string;
     const expiresIn = token.json.expires_in as number;
-    evidence.push(`token issued expires_in=${expiresIn}s token=${accessToken.slice(0, 12)}...`);
+    const refreshToken1 = token.json.refresh_token as string;
+    assert(typeof refreshToken1 === "string" && refreshToken1.length > 0, "v0.9.0: token response must include refresh_token");
+    const refreshExpiresIn = token.json.refresh_expires_in as number;
+    evidence.push(`token issued expires_in=${expiresIn}s refresh_expires_in=${refreshExpiresIn}s token=${accessToken.slice(0, 12)}...`);
 
-    // 8) Call /mcp with the Bearer
+    // 7b) v0.9.0 — refresh-token rotation: present the first refresh
+    // token, expect a new access+refresh pair, with the same scope.
+    const refresh1 = await rpc(baseUrl, "/oauth2/v1/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: paramsToFormBody({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken1,
+        client_id: clientId,
+      }),
+    });
+    assert(refresh1.status === 200, `Refresh #1 status=${refresh1.status} body=${refresh1.text}`);
+    assert(refresh1.json.access_token, "Refresh #1 must return a new access_token");
+    assert(refresh1.json.refresh_token, "Refresh #1 must return a new refresh_token");
+    assert(refresh1.json.refresh_token !== refreshToken1, "Refresh #1 must rotate the refresh_token (single-use)");
+    assert(refresh1.json.scope === "mcp:read", "Refresh #1 must preserve the original scope");
+    const refreshToken2 = refresh1.json.refresh_token as string;
+    const accessToken2 = refresh1.json.access_token as string;
+    assert(accessToken2.split(".").length === 3, "Refresh #1 access_token must be a JWT (3 segments)");
+    evidence.push(`refresh #1 ok new_token=${accessToken2.slice(0, 12)}... rotated_refresh=${refreshToken2.slice(0, 8)}...`);
+
+    // 7c) Negative: re-use the FIRST refresh token (already rotated).
+    // RFC 6749 §10.4: this signals a stolen-token replay; the server
+    // MUST reject and should revoke the family.
+    const refreshReuse1 = await rpc(baseUrl, "/oauth2/v1/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: paramsToFormBody({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken1,
+        client_id: clientId,
+      }),
+    });
+    assert(refreshReuse1.status === 400, `Reuse of rotated refresh must 400, got ${refreshReuse1.status}`);
+    assert(refreshReuse1.json.error === "invalid_grant", `Reuse error must be invalid_grant, got ${refreshReuse1.json.error}`);
+    evidence.push("rotated refresh correctly rejected on reuse (single-use)");
+
+    // 7d) Negative: re-use the SECOND refresh token with the WRONG
+    // client_id. RFC 6749 §6: "the authorization server MUST ...
+    // verify that the refresh token was issued to the same client".
+    // The handler detects this, revokes the family (the entire
+    // rotation chain is killed to limit the blast radius of a stolen
+    // token), and returns invalid_grant.
+    // Note: register a second client for this test so we can
+    // present the original client's refresh token to it.
+    const otherRegister = await rpc(baseUrl, "/oauth2/v1/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: paramsToJsonBody({
+        client_name: "oauth-demo-other",
+        redirect_uris: [redirectUri],
+        scope: "mcp:read",
+        token_endpoint_auth_method: "none",
+      }),
+    });
+    assert(otherRegister.status === 201, `Other DCR status=${otherRegister.status} body=${otherRegister.text}`);
+    const otherClientId = otherRegister.json.client_id as string;
+    // refreshToken2 was just issued in 7b and is still live (it has
+    // not been consumed yet). Use it for the cross-client test.
+    const crossClient = await rpc(baseUrl, "/oauth2/v1/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: paramsToFormBody({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken2,
+        client_id: otherClientId,
+      }),
+    });
+    assert(crossClient.status === 400, `Cross-client refresh must 400, got ${crossClient.status}`);
+    assert(crossClient.json.error === "invalid_grant", `Cross-client error must be invalid_grant, got ${crossClient.json.error}`);
+    assert(crossClient.json.error_description?.includes("family revoked"), `Cross-client must mention family revocation, got ${crossClient.json.error_description}`);
+    evidence.push("cross-client refresh correctly rejected + family revoked");
+
+    // After family revocation, refreshToken2 (which was just consumed
+    // by 7d) is also gone. Any further attempt with it must fail.
+    const afterRevoke = await rpc(baseUrl, "/oauth2/v1/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: paramsToFormBody({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken2,
+        client_id: clientId,
+      }),
+    });
+    assert(afterRevoke.status === 400, `Refresh after family revoke must 400, got ${afterRevoke.status}`);
+    assert(afterRevoke.json.error === "invalid_grant", `Post-revoke error must be invalid_grant, got ${afterRevoke.json.error}`);
+    evidence.push("post-revocation refresh correctly rejected (invalid_grant)");
+
+    // Use the rotated access token for the MCP calls below.
+    const rotatedAccessToken = accessToken2;
+
+    // 8) Call /mcp with the Bearer (use the rotated access token to also
+    //    exercise the post-rotation token path end-to-end).
     const init = await rpc(baseUrl, "/mcp", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         accept: "application/json, text/event-stream",
-        authorization: `Bearer ${accessToken}`,
+        authorization: `Bearer ${rotatedAccessToken}`,
       },
       body: paramsToJsonBody({
         jsonrpc: "2.0",
@@ -227,7 +322,7 @@ async function main(): Promise<void> {
       headers: {
         "content-type": "application/json",
         accept: "application/json, text/event-stream",
-        authorization: `Bearer ${accessToken}`,
+        authorization: `Bearer ${rotatedAccessToken}`,
         "mcp-session-id": sessionId,
       },
       body: paramsToJsonBody({ jsonrpc: "2.0", id: 2, method: "tools/list" }),
@@ -253,6 +348,7 @@ async function main(): Promise<void> {
     assert(reuse.status === 400, `Reuse of auth code should be 400, got ${reuse.status}`);
     assert(reuse.json.error === "invalid_grant", `Reuse error must be invalid_grant, got ${reuse.json.error}`);
     evidence.push("auth code correctly rejected on reuse (single-use)");
+    evidence.push("OAUTH-DEMO REFRESH PASS");
 
     // 11) Negative: PKCE mismatch
     const wrongVerifier = generateCodeVerifier();

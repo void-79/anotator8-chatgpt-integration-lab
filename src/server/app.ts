@@ -47,7 +47,7 @@ function captureUnhandledRejection(reason: unknown): void {
 process.on("unhandledRejection", captureUnhandledRejection);
 
 const SERVER_NAME = "anotator8-chatgpt-integration-lab";
-const SERVER_VERSION = "0.8.0";
+const SERVER_VERSION = "0.9.0";
 
 const instructions = [
   "External Anotator8 ChatGPT integration lab.",
@@ -129,6 +129,7 @@ export function createHttpMcpApp() {
   const cimdAllowlist = (process.env.MCP_OAUTH_CIMD_ALLOWLIST ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const defaultSubject = process.env.MCP_OAUTH_DEFAULT_SUBJECT?.trim() || "demo-user";
   const tokenTtlSeconds = Number(process.env.MCP_OAUTH_TOKEN_TTL ?? "900");
+  const refreshTtlSeconds = Number(process.env.MCP_OAUTH_REFRESH_TTL_SECONDS ?? `${60 * 60 * 24 * 30}`);
   const oauthMode = readOauthModeFromEnv();
   // v0.8.0: build the issuer factory first so we can route the
   // in-process AS endpoints correctly and validate tokens against
@@ -153,6 +154,7 @@ export function createHttpMcpApp() {
     resource: oauthConfig.resource,
     defaultSubject,
     tokenTtlSeconds,
+    refreshTtlSeconds,
     cimdAllowInsecureHttp: asConfig.allowInsecureHttp,
     cimdAllowlistHostnames: cimdAllowlist,
   });
